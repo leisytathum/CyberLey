@@ -8,7 +8,6 @@ SUPABASE_URL = "https://zytfjhwdrpbmkkrdbagj.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dGZqaHdkcnBibWtrcmRiYWdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MjY0NjQsImV4cCI6MjA5MjQwMjQ2NH0.fx9zkY5iWLH-rm0MWEFfh09g7mBPeu-Zgi9vUMm6oAg"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 # =========================
 # LOGIN SIMPLE
 # =========================
