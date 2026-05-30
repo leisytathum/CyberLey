@@ -23,95 +23,95 @@ st.set_page_config(
     page_icon="🔐",
     layout="centered"
 )
+def cargar_css():
+    with open("css/styles.css", "r", encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+cargar_css()
 
-# =========================
-# ESTILOS
-# =========================
+col1, col2 = st.columns([1.1, 1])
 
-st.markdown("""
-<style>
-.stApp {
-    background: linear-gradient(135deg, #f8f5ff 0%, #ffffff 45%, #fff5f5 100%);
-}
+with col1:
 
-[data-testid="stHeader"] {
-    background: transparent;
-}
+    st.image("Logo.png", width=260)
 
-.block-container {
-    max-width: 480px;
-    padding-top: 50px;
-}
+    st.markdown("""
+    <h1 class="brand-title">CyberLey</h1>
+    """, unsafe_allow_html=True)
 
-.login-card {
-    background: white;
-    padding: 35px;
-    border-radius: 24px;
-    box-shadow: 0px 12px 35px rgba(127, 90, 240, 0.18);
-    border: 1px solid #eee7ff;
-}
+    st.markdown("""
+    <p class="brand-description">
+        Plataforma para el análisis de hábitos digitales,
+        evaluación de riesgos y fortalecimiento de la cultura
+        de ciberseguridad.
+    </p>
+    """, unsafe_allow_html=True)
 
-.title {
-    text-align: center;
-    color: #1f1f2e;
-    font-size: 30px;
-    font-weight: 800;
-    margin-top: 10px;
-}
+    st.markdown("""
+    <div class="feature-box">
+        🔒 Identifica riesgos digitales y promueve buenas prácticas de seguridad.
+    </div>
+    """, unsafe_allow_html=True)
 
-.subtitle {
-    text-align: center;
-    color: #6b7280;
-    font-size: 15px;
-    margin-bottom: 25px;
-}
 
-.stButton > button {
-    background: linear-gradient(90deg, #7c3aed, #ef233c);
-    color: white;
-    border-radius: 14px;
-    height: 48px;
-    font-weight: 700;
-    border: none;
-}
+with col2:
 
-.stButton > button:hover {
-    color: white;
-    opacity: 0.92;
-}
-</style>
-""", unsafe_allow_html=True)
+    st.markdown("""
+    <h2 class="form-title">Iniciar sesión</h2>
+    <p class="form-subtitle">
+        Accede al sistema.
+    </p>
+    """, unsafe_allow_html=True)
 
-st.image("Logo.png", use_container_width=True)
+    email = st.text_input("Correo electrónico")
+    password = st.text_input("Contraseña", type="password")
 
-st.markdown("<div class='login-card'>", unsafe_allow_html=True)
+    if st.button("Iniciar sesión", use_container_width=True):
 
-st.markdown("<div class='title'>Iniciar sesión</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Accede al panel administrativo de CyberLey</div>", unsafe_allow_html=True)
+        if email == "" or password == "":
+            st.warning("Por favor ingresa correo y contraseña.")
 
-email = st.text_input("Correo electrónico")
-password = st.text_input("Contraseña", type="password")
-
-if st.button("Iniciar sesión", use_container_width=True):
-    if email == "" or password == "":
-        st.warning("Por favor ingresa correo y contraseña.")
-    else:
-        try:
-            response = supabase.auth.sign_in_with_password({
-                "email": email,
-                "password": password
+        else:
+            try:
+                response = supabase.auth.sign_in_with_password({
+                    "email": email.strip(),
+                    "password": password
             })
 
-            st.success("✅ Login exitoso")
-            st.write(f"Bienvenido: {response.user.email}")
+            # Guardar tokens para conservar la sesión en las demás páginas
+                if response.session:
+                    st.session_state["access_token"] = response.session.access_token
+                    st.session_state["refresh_token"] = response.session.refresh_token
 
-        except Exception as e:
-            st.error("❌ Error al iniciar sesión")
-            st.write(e)
+                usuario_id = response.user.id
 
-st.write("")
+                perfil_response = (
+                        supabase
+                        .table("perfiles")
+                        .select("nombre_completo, rol")
+                        .eq("id", usuario_id)
+                        .single()
+                        .execute()
+                    )
 
-if st.button("Crear cuenta nueva", use_container_width=True):
-    st.switch_page("pages/registro.py")
+                perfil = perfil_response.data
 
-st.markdown("</div>", unsafe_allow_html=True)
+                if not perfil:
+                    st.error("No se encontró el perfil del usuario.")
+                    st.stop()
+
+                st.session_state["usuario"] = response.user.email
+                st.session_state["usuario_id"] = usuario_id
+                st.session_state["nombre"] = perfil["nombre_completo"]
+                st.session_state["rol"] = perfil["rol"]
+
+                if perfil["rol"] == "admin":
+                        st.switch_page("pages/dashboard.py")
+                else:
+                        st.switch_page("pages/usuario.py")
+
+            except Exception as e:
+                st.error("❌ Error al iniciar sesión")
+                st.write(e)
+
+    if st.button("Crear cuenta nueva", use_container_width=True):
+        st.switch_page("pages/registro.py")

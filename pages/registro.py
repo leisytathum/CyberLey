@@ -2,6 +2,8 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import streamlit as st
+from httpx import ReadTimeout
+from pathlib import Path
 
 load_dotenv()
 
@@ -15,90 +17,193 @@ st.set_page_config(
     page_icon="📝",
     layout="centered"
 )
+ROOT_DIR = Path(__file__).resolve().parents[1]
 
-st.markdown("""
-<style>
-.stApp {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f5ff 45%, #fff1f2 100%);
-}
+def cargar_css():
+    with open(ROOT_DIR / "css" / "styles.css", "r", encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-[data-testid="stHeader"] {
-    background: transparent;
-}
 
-.block-container {
-    max-width: 480px;
-    padding-top: 50px;
-}
+cargar_css()
 
-.register-card {
-    background: white;
-    padding: 35px;
-    border-radius: 24px;
-    box-shadow: 0px 12px 35px rgba(239, 35, 60, 0.16);
-    border: 1px solid #ffe4e6;
-}
+# =========================
+# DISEÑO EN DOS COLUMNAS
+# =========================
+ROOT_DIR = Path(__file__).resolve().parents[1]
 
-.title {
-    text-align: center;
-    color: #1f1f2e;
-    font-size: 30px;
-    font-weight: 800;
-    margin-top: 10px;
-}
+col1, col2 = st.columns([1.1, 1])
 
-.subtitle {
-    text-align: center;
-    color: #6b7280;
-    font-size: 15px;
-    margin-bottom: 25px;
-}
 
-.stButton > button {
-    background: linear-gradient(90deg, #ef233c, #7c3aed);
-    color: white;
-    border-radius: 14px;
-    height: 48px;
-    font-weight: 700;
-    border: none;
-}
+# =========================
+# COLUMNA IZQUIERDA
+# =========================
 
-.stButton > button:hover {
-    color: white;
-    opacity: 0.92;
-}
-</style>
-""", unsafe_allow_html=True)
+with col1:
 
-st.image("Logo.png", use_container_width=True)
+    st.image(
+        str(ROOT_DIR / "Logo.png"),
+        width=260
+    )
 
-st.markdown("<div class='register-card'>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <h1 class="brand-title">CyberLey</h1>
+        """,
+        unsafe_allow_html=True
+    )
 
-st.markdown("<div class='title'>Crear cuenta</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Registra un usuario para probar el sistema</div>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <p class="brand-description">
+            Crea una cuenta para acceder al sistema de análisis
+            de hábitos digitales y ciberseguridad.
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
 
-nuevo_email = st.text_input("Correo electrónico")
-nueva_password = st.text_input("Contraseña", type="password")
+    st.markdown(
+        """
+        <div class="feature-box">
+            🚀 Evalúa tus hábitos digitales y recibe recomendaciones
+            para mejorar tu seguridad en línea.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-if st.button("Crear cuenta", use_container_width=True):
-    if nuevo_email == "" or nueva_password == "":
-        st.warning("Completa todos los campos.")
-    else:
-        try:
-            supabase.auth.sign_up({
-                "email": nuevo_email,
-                "password": nueva_password
-            })
 
-            st.success("✅ Usuario registrado correctamente.")
-            st.info("Ahora puedes volver a Login e iniciar sesión.")
+# =========================
+# COLUMNA DERECHA
+# =========================
 
-        except Exception as e:
-            st.error("❌ Error al registrar usuario")
-            st.write(e)
+with col2:
 
-st.markdown("</div>", unsafe_allow_html=True)
-st.write("")
+    st.markdown(
+        """
+        <h2 class="form-title">Crear cuenta</h2>
+        <p class="form-subtitle">
+            Completa tus datos para acceder a CyberLey.
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
 
-if st.button("Volver a iniciar sesión", use_container_width=True):
-    st.switch_page("app.py")
+    nombre_completo = st.text_input(
+        "Nombre completo",
+        placeholder="Ejemplo: Ana Martínez"
+    )
+
+    edad = st.number_input(
+        "Edad",
+        min_value=10,
+        max_value=100,
+        step=1
+    )
+
+    genero = st.selectbox(
+        "Género",
+        [
+            "Seleccionar",
+            "Femenino",
+            "Masculino",
+            "Prefiero no responder",
+            "Otro"
+        ]
+    )
+
+    ciudad = st.text_input(
+        "Ciudad",
+        placeholder="Ejemplo: La Ceiba"
+    )
+
+    nivel_educativo = st.selectbox(
+        "Nivel educativo",
+        [
+            "Seleccionar",
+            "Secundaria",
+            "Universidad",
+            "Técnico",
+            "Posgrado",
+            "Otro"
+        ]
+    )
+
+    nuevo_email = st.text_input(
+        "Correo electrónico",
+        placeholder="correo@ejemplo.com"
+    )
+
+    nueva_password = st.text_input(
+        "Contraseña",
+        type="password"
+    )
+
+    if st.button(
+        "Crear cuenta",
+        use_container_width=True
+    ):
+
+        if (
+            nombre_completo.strip() == ""
+            or ciudad.strip() == ""
+            or nuevo_email.strip() == ""
+            or nueva_password == ""
+        ):
+            st.warning("Completa todos los campos.")
+
+        elif genero == "Seleccionar":
+            st.warning("Selecciona tu género.")
+
+        elif nivel_educativo == "Seleccionar":
+            st.warning("Selecciona tu nivel educativo.")
+
+        elif len(nueva_password) < 6:
+            st.warning(
+                "La contraseña debe tener al menos 6 caracteres."
+            )
+
+        else:
+            try:
+                supabase.auth.sign_up({
+                    "email": nuevo_email.strip(),
+                    "password": nueva_password,
+                    "options": {
+                        "data": {
+                            "nombre_completo": nombre_completo.strip(),
+                            "edad": int(edad),
+                            "genero": genero,
+                            "ciudad": ciudad.strip(),
+                            "nivel_educativo": nivel_educativo
+                        }
+                    }
+                })
+
+                st.success("✅ Cuenta creada correctamente.")
+                st.info(
+                    "Ya puedes volver al inicio e iniciar sesión."
+                )
+
+            except ReadTimeout:
+                st.success(
+                    "✅ La solicitud de registro fue procesada."
+                )
+
+                st.info(
+                    "Supabase tardó en responder. "
+                    "La cuenta podría haberse creado correctamente. "
+                    "Vuelve al inicio e intenta iniciar sesión."
+                )
+
+            except Exception as error:
+                st.error(
+                    "❌ No se pudo completar el registro. "
+                    "Verifica los datos o intenta nuevamente."
+                )
+                st.write(error)
+
+    if st.button(
+        "Volver a iniciar sesión",
+        use_container_width=True
+    ):
+        st.switch_page("app.py")
