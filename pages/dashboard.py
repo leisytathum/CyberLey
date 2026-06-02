@@ -46,6 +46,8 @@ with st.sidebar:
     )
     if menu == "👥 Participantes":
         st.switch_page("pages/participantes.py")
+    elif menu == "📝 Encuestas":
+        st.switch_page("pages/encuestas.py")
 
     st.divider()
 

@@ -19,7 +19,13 @@ st.info(
     "Próximamente podrás completar encuestas, consultar tu nivel "
     "de riesgo y revisar guías de ciberseguridad."
 )
-
+if st.button(
+    "Completar encuesta de ciberseguridad",
+    use_container_width=True
+):
+    st.switch_page("pages/encuesta_usuario.py")
+    
+    
 if st.button("Cerrar sesión"):
     st.session_state.clear()
     st.switch_page("app.py")

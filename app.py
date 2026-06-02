@@ -1,7 +1,9 @@
 import os
+import time
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import streamlit as st
+from httpx import ReadTimeout
 load_dotenv()
 
 
@@ -72,31 +74,55 @@ with col2:
 
         else:
             try:
-                response = supabase.auth.sign_in_with_password({
-                    "email": email.strip(),
-                    "password": password
-            })
+                response = None
 
-            # Guardar tokens para conservar la sesión en las demás páginas
+                # Intentar iniciar sesión hasta 2 veces
+                for intento in range(2):
+                    try:
+                        response = supabase.auth.sign_in_with_password({
+                            "email": email.strip(),
+                            "password": password
+                        })
+
+                        break
+
+                    except ReadTimeout:
+                        if intento == 0:
+                            time.sleep(1)
+                        else:
+                            st.error(
+                                "Supabase está tardando demasiado en responder. "
+                                "Intenta iniciar sesión nuevamente en unos segundos."
+                            )
+                            st.stop()
+
+                # Guardar tokens para conservar la sesión
                 if response.session:
-                    st.session_state["access_token"] = response.session.access_token
-                    st.session_state["refresh_token"] = response.session.refresh_token
+                    st.session_state["access_token"] = (
+                        response.session.access_token
+                    )
+
+                    st.session_state["refresh_token"] = (
+                        response.session.refresh_token
+                    )
 
                 usuario_id = response.user.id
 
                 perfil_response = (
-                        supabase
-                        .table("perfiles")
-                        .select("nombre_completo, rol")
-                        .eq("id", usuario_id)
-                        .single()
-                        .execute()
-                    )
+                    supabase
+                    .table("perfiles")
+                    .select("nombre_completo, rol")
+                    .eq("id", usuario_id)
+                    .maybe_single()
+                    .execute()
+                )
 
                 perfil = perfil_response.data
 
                 if not perfil:
-                    st.error("No se encontró el perfil del usuario.")
+                    st.error(
+                        "Tu cuenta existe, pero no tiene un perfil asociado."
+                    )
                     st.stop()
 
                 st.session_state["usuario"] = response.user.email
@@ -105,13 +131,15 @@ with col2:
                 st.session_state["rol"] = perfil["rol"]
 
                 if perfil["rol"] == "admin":
-                        st.switch_page("pages/dashboard.py")
+                    st.switch_page("pages/dashboard.py")
                 else:
-                        st.switch_page("pages/usuario.py")
+                    st.switch_page("pages/usuario.py")
 
-            except Exception as e:
-                st.error("❌ Error al iniciar sesión")
-                st.write(e)
+            except Exception:
+                st.error(
+                    "No se pudo iniciar sesión. "
+                    "Verifica tu correo y contraseña o intenta nuevamente."
+                )
 
     if st.button("Crear cuenta nueva", use_container_width=True):
         st.switch_page("pages/registro.py")

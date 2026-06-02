@@ -97,3 +97,87 @@ footer {
 .stAlert {
     border-radius: 14px;
 }
+
+/* =========================
+   ENCUESTA DE USUARIO
+========================= */
+
+.survey-heading {
+    max-width: 820px;
+    margin: 10px auto 28px auto;
+    text-align: center;
+}
+
+.survey-heading h1 {
+    color: #1f2937;
+    font-size: 34px;
+    margin: 12px 0 8px 0;
+}
+
+.survey-heading p {
+    color: #6b7280;
+    font-size: 16px;
+}
+
+.survey-badge {
+    display: inline-block;
+    background: #ede9fe;
+    color: #7c3aed;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.risk-result {
+    margin-top: 24px;
+    border-radius: 18px;
+    padding: 24px;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+}
+
+.risk-result p {
+    margin: 0;
+    color: #6b7280;
+}
+
+.risk-result h2 {
+    margin: 8px 0;
+    font-size: 30px;
+}
+
+.risk-result h3 {
+    margin: 8px 0;
+}
+
+.risk-result span {
+    color: #4b5563;
+}
+
+.risk-result.bajo {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.risk-result.bajo h2 {
+    color: #15803d;
+}
+
+.risk-result.medio {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+.risk-result.medio h2 {
+    color: #b45309;
+}
+
+.risk-result.alto {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.risk-result.alto h2 {
+    color: #dc2626;
+}
