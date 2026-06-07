@@ -252,3 +252,110 @@
     color: #4b5563;
     margin: 6px 0;
 }
+/* =========================
+   DASHBOARD CON DATOS REALES
+========================= */
+
+.section-title {
+    color: #1f2937;
+    font-size: 19px;
+    font-weight: 800;
+    margin: 12px 0 14px 0;
+}
+
+.metric-card.purple .metric-icon {
+    background: #ede9fe;
+}
+
+.metric-card.blue .metric-icon {
+    background: #dbeafe;
+}
+
+.metric-card.red .metric-icon {
+    background: #fee2e2;
+}
+
+.metric-card.yellow .metric-icon {
+    background: #fef3c7;
+}
+
+.metric-card.green .metric-icon {
+    background: #dcfce7;
+}
+
+[data-testid="stVegaLiteChart"] {
+    background: #ffffff;
+    border: 1px solid #eee7ff;
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: 0 10px 26px rgba(139, 92, 246, 0.06);
+}
+/* =========================
+   LIMPIEZA DE DATOS
+========================= */
+
+[data-testid="stMetric"] {
+    background: #ffffff;
+    border: 1px solid #eee7ff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.06);
+}
+
+[data-testid="stTabs"] button {
+    font-weight: 700;
+}
+
+[data-testid="stDataFrame"] {
+    background: #ffffff;
+    border: 1px solid #eee7ff;
+    border-radius: 16px;
+    padding: 6px;
+}
+/* =========================
+   RESPALDO Y RECUPERACIÓN
+========================= */
+
+[data-testid="stFileUploader"] {
+    background: #ffffff;
+    border: 1px dashed #c4b5fd;
+    border-radius: 16px;
+    padding: 12px;
+}
+
+[data-testid="stDownloadButton"] > button {
+    background: linear-gradient(90deg, #8b5cf6, #ef233c);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-weight: 800;
+    min-height: 48px;
+}
+
+[data-testid="stDownloadButton"] > button:hover {
+    color: white;
+    opacity: 0.94;
+}
+/* =========================
+   ANÁLISIS DE RIESGO
+========================= */
+
+[data-testid="stTabs"] button {
+    font-weight: 700;
+}
+
+[data-testid="stMetric"] {
+    background: #ffffff;
+    border: 1px solid #eee7ff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.06);
+}
+
+[data-testid="stVegaLiteChart"] {
+    background: #ffffff;
+    border: 1px solid #eee7ff;
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: 0 10px 26px rgba(139, 92, 246, 0.06);
+}

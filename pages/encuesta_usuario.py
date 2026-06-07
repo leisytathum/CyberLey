@@ -370,11 +370,11 @@ if enviar:
             "usa_wifi_publico": convertir_si_no(
                 usa_wifi_publico_texto
             ),
-            "reconoce_phishing": (
-                reconoce_phishing_texto
-                .lower()
-                .replace(" ", "_")
-            ),
+            "reconoce_phishing": {
+                "Sí": "si",
+                "A veces": "a_veces",
+                "No": "no"
+            }[reconoce_phishing_texto],
             "usa_doble_factor": convertir_si_no(
                 usa_doble_factor_texto
             ),
@@ -398,8 +398,10 @@ if enviar:
                 respuestas
             )
 
-            st.success(
-                "✅ Encuesta completada correctamente."
+            st.toast(
+                "Encuesta completada correctamente.",
+                icon="✅",
+                duration=4
             )
 
             st.markdown(

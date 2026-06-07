@@ -179,9 +179,10 @@ with col2:
                     }
                 })
 
-                st.success("✅ Cuenta creada correctamente.")
-                st.info(
-                    "Ya puedes volver al inicio e iniciar sesión."
+                st.toast(
+                    "Cuenta creada correctamente. Ya puedes iniciar sesión.",
+                    icon="✅",
+                    duration=5
                 )
 
             except ReadTimeout:

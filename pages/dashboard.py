@@ -1,34 +1,207 @@
+import os
+from pathlib import Path
+
+import pandas as pd
 import streamlit as st
+from dotenv import load_dotenv
+from supabase import Client, create_client
+
+
+# =========================
+# CONFIGURACIÓN GENERAL
+# =========================
 
 st.set_page_config(
-    page_title="CyberLey | Admin",
+    page_title="CyberLey | Panel Administrador",
     page_icon="🛡️",
     layout="wide"
 )
 
-# =========================
-# CSS
-# =========================
-def cargar_css():
-    with open("css/dashboard.css", "r", encoding="utf-8") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+ROOT_DIR = Path(__file__).resolve().parents[1]
 
-cargar_css()
+load_dotenv(ROOT_DIR / ".env")
+
+SUPABASE_URL = "https://zytfjhwdrpbmkkrdbagj.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dGZqaHdkcnBibWtrcmRiYWdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MjY0NjQsImV4cCI6MjA5MjQwMjQ2NH0.fx9zkY5iWLH-rm0MWEFfh09g7mBPeu-Zgi9vUMm6oAg"
+
+if not SUPABASE_KEY:
+    st.error("No se encontró SUPABASE_KEY en el archivo .env.")
+    st.stop()
+
+supabase: Client = create_client(
+    SUPABASE_URL,
+    SUPABASE_KEY
+)
+
 
 # =========================
-# VALIDAR SESIÓN
+# RESTAURAR SESIÓN
 # =========================
+
+access_token = st.session_state.get("access_token")
+refresh_token = st.session_state.get("refresh_token")
+
+if access_token and refresh_token:
+    supabase.auth.set_session(
+        access_token,
+        refresh_token
+    )
+
+
+# =========================
+# VALIDAR ACCESO ADMIN
+# =========================
+
 if "usuario" not in st.session_state:
     st.warning("Debes iniciar sesión primero.")
     st.switch_page("app.py")
 
-# =========================
-# SIDEBAR ADMIN
-# =========================
-with st.sidebar:
-    st.image("Logo.png", use_container_width=True)
+if st.session_state.get("rol") != "admin":
+    st.warning("Esta sección es exclusiva para administradores.")
+    st.switch_page("pages/usuario.py")
 
-    st.markdown("<div class='sidebar-title'>Panel Admin</div>", unsafe_allow_html=True)
+
+# =========================
+# CARGAR CSS
+# =========================
+
+def cargar_css():
+    ruta_css = ROOT_DIR / "css" / "dashboard.css"
+
+    with open(ruta_css, "r", encoding="utf-8") as archivo:
+        st.markdown(
+            f"<style>{archivo.read()}</style>",
+            unsafe_allow_html=True
+        )
+
+
+cargar_css()
+
+
+# =========================
+# CONSULTAR TABLAS
+# =========================
+
+def consultar_tabla(
+    nombre_tabla: str,
+    columnas: str = "*"
+) -> list[dict]:
+    respuesta = (
+        supabase
+        .table(nombre_tabla)
+        .select(columnas)
+        .execute()
+    )
+
+    return respuesta.data or []
+
+
+try:
+    participantes = consultar_tabla(
+        "participantes",
+        "id_participante, nombre_completo, ciudad, nivel_educativo"
+    )
+
+    encuestas = consultar_tabla(
+        "encuestas",
+        "id_encuesta, id_participante, fecha_aplicacion, estado"
+    )
+
+    resultados = consultar_tabla(
+        "resultados_riesgo",
+        "id_encuesta, puntaje_riesgo, clasificacion_riesgo, fecha_calculo"
+    )
+
+    respuestas = consultar_tabla(
+        "respuestas_encuesta",
+        (
+            "id_encuesta, usa_misma_contrasena, usa_wifi_publico, "
+            "reconoce_phishing, usa_doble_factor, tiene_antivirus, "
+            "actualiza_contrasenas, comparte_info_redes"
+        )
+    )
+
+except Exception as error:
+    st.error("No se pudieron cargar los datos del dashboard.")
+    st.write(error)
+    st.stop()
+
+
+# =========================
+# PROCESAR MÉTRICAS
+# =========================
+
+total_participantes = len(participantes)
+total_encuestas = len(encuestas)
+
+df_resultados = pd.DataFrame(resultados)
+
+if df_resultados.empty:
+    cantidad_alto = 0
+    cantidad_medio = 0
+    cantidad_bajo = 0
+
+else:
+    cantidad_alto = len(
+        df_resultados[
+            df_resultados["clasificacion_riesgo"] == "alto"
+        ]
+    )
+
+    cantidad_medio = len(
+        df_resultados[
+            df_resultados["clasificacion_riesgo"] == "medio"
+        ]
+    )
+
+    cantidad_bajo = len(
+        df_resultados[
+            df_resultados["clasificacion_riesgo"] == "bajo"
+        ]
+    )
+
+
+def calcular_porcentaje(cantidad: int, total: int) -> float:
+    if total == 0:
+        return 0
+
+    return round(
+        cantidad / total * 100,
+        1
+    )
+
+
+porcentaje_alto = calcular_porcentaje(
+    cantidad_alto,
+    len(resultados)
+)
+
+porcentaje_medio = calcular_porcentaje(
+    cantidad_medio,
+    len(resultados)
+)
+
+porcentaje_bajo = calcular_porcentaje(
+    cantidad_bajo,
+    len(resultados)
+)
+
+
+# =========================
+# SIDEBAR ADMINISTRADOR
+# =========================
+
+with st.sidebar:
+
+    st.image(
+        str(ROOT_DIR / "Logo.png"),
+        use_container_width=True
+    )
+
+    st.markdown(
+        "<div class='sidebar-title'>Panel Administrador</div>",
+        unsafe_allow_html=True
+    )
 
     menu = st.radio(
         "Menú",
@@ -37,31 +210,60 @@ with st.sidebar:
             "👥 Participantes",
             "📝 Encuestas",
             "⚠️ Riesgo",
-            "📊 Dashboards",
-            "📚 Guías",
+            "🧹 Limpieza de datos",
+            "💾 Respaldo y recuperación",
             "📄 Reportes",
             "⚙️ Administración"
         ],
+        index=0,
         label_visibility="collapsed"
     )
-    if menu == "👥 Participantes":
-        st.switch_page("pages/participantes.py")
-    elif menu == "📝 Encuestas":
-        st.switch_page("pages/encuestas.py")
 
     st.divider()
 
-    if st.button("🚪 Cerrar sesión", use_container_width=True):
+    if st.button(
+        "🚪 Cerrar sesión",
+        use_container_width=True
+    ):
         st.session_state.clear()
         st.switch_page("app.py")
 
+
 # =========================
-# DASHBOARD ADMIN
+# NAVEGACIÓN DEL SIDEBAR
 # =========================
 
-nombre_admin = st.session_state.get("nombre", "Administradora")
+if menu == "👥 Participantes":
+    st.switch_page("pages/participantes.py")
 
-st.markdown(f"""
+elif menu == "📝 Encuestas":
+    st.switch_page("pages/encuestas.py")
+
+elif menu == "🧹 Limpieza de datos":
+    st.switch_page("pages/limpieza.py")
+    
+elif menu == "💾 Respaldo y recuperación":
+    st.switch_page("pages/respaldo.py")
+    
+elif menu == "⚠️ Riesgo":
+    st.switch_page("pages/riesgo.py")
+    
+elif menu == "📄 Reportes":
+    st.switch_page("pages/reportes.py")
+elif menu == "⚙️ Administración":
+    st.switch_page("pages/administracion.py")
+
+# =========================
+# ENCABEZADO
+# =========================
+
+nombre_admin = st.session_state.get(
+    "nombre",
+    "Administrador"
+)
+
+st.markdown(
+    f"""
 <div class="topbar">
 <div class="menu-icon">☰</div>
 <div class="admin-info">
@@ -77,112 +279,281 @@ st.markdown(f"""
 <div class="dashboard-header">
 <div>
 <h1>¡Bienvenida, {nombre_admin}! 👋</h1>
-<p>Resumen general del sistema de análisis de hábitos digitales y ciberseguridad.</p>
+<p>Resumen real de los hábitos digitales y niveles de riesgo registrados.</p>
 </div>
+</div>
+""",
+    unsafe_allow_html=True
+)
 
-<div class="header-actions">
-<button>👤 Ver participantes</button>
-<button class="green-btn">📋 Nueva encuesta</button>
-<button class="purple-btn">📄 Generar reporte</button>
-</div>
-</div>
-""", unsafe_allow_html=True)
+
+# =========================
+# TARJETAS DE MÉTRICAS
+# =========================
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
-    st.markdown("""
-    <div class="metric-card blue">
-        <div class="metric-icon">👥</div>
-        <div>
-            <p>Participantes registrados</p>
-            <h2>256</h2>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+<div class="metric-card purple">
+<div class="metric-icon">👥</div>
+<div>
+<p>Participantes</p>
+<h2>{total_participantes}</h2>
+<small>Registrados</small>
+</div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
 
 with col2:
-    st.markdown("""
-    <div class="metric-card green">
-        <div class="metric-icon">📋</div>
-        <div>
-            <p>Encuestas realizadas</p>
-            <h2>312</h2>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+<div class="metric-card blue">
+<div class="metric-icon">📝</div>
+<div>
+<p>Encuestas</p>
+<h2>{total_encuestas}</h2>
+<small>Completadas</small>
+</div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
 
 with col3:
-    st.markdown("""
-    <div class="metric-card red">
-        <div class="metric-icon">⚠️</div>
-        <div>
-            <p>Riesgo alto</p>
-            <h2>28%</h2>
-            <small>87 participantes</small>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+<div class="metric-card red">
+<div class="metric-icon">⚠️</div>
+<div>
+<p>Riesgo alto</p>
+<h2>{porcentaje_alto}%</h2>
+<small>{cantidad_alto} resultados</small>
+</div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
 
 with col4:
-    st.markdown("""
-    <div class="metric-card yellow">
-        <div class="metric-icon">🛡️</div>
-        <div>
-            <p>Riesgo medio</p>
-            <h2>46%</h2>
-            <small>143 participantes</small>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+<div class="metric-card yellow">
+<div class="metric-icon">🛡️</div>
+<div>
+<p>Riesgo medio</p>
+<h2>{porcentaje_medio}%</h2>
+<small>{cantidad_medio} resultados</small>
+</div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
 
 with col5:
-    st.markdown("""
-    <div class="metric-card green">
-        <div class="metric-icon">✅</div>
-        <div>
-            <p>Riesgo bajo</p>
-            <h2>26%</h2>
-            <small>82 participantes</small>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+<div class="metric-card green">
+<div class="metric-icon">✅</div>
+<div>
+<p>Riesgo bajo</p>
+<h2>{porcentaje_bajo}%</h2>
+<small>{cantidad_bajo} resultados</small>
+</div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
+
 
 st.write("")
 
-col_a, col_b, col_c = st.columns([1.1, 1.1, 1])
 
-with col_a:
-    st.markdown("""
-    <div class="admin-card">
-        <h3>Distribución de nivel de riesgo</h3>
-        <div class="fake-chart">
-            <div class="donut">46%</div>
+# =========================
+# GRÁFICOS Y ALERTAS
+# =========================
+
+col_grafico, col_tendencia, col_alertas = st.columns(
+    [1, 1.15, 1]
+)
+
+
+with col_grafico:
+
+    st.markdown(
+        """
+        <div class="section-title">
+            Distribución del nivel de riesgo
         </div>
-        <p>🔴 Riesgo alto — 28%</p>
-        <p>🟡 Riesgo medio — 46%</p>
-        <p>🟢 Riesgo bajo — 26%</p>
-    </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True
+    )
 
-with col_b:
-    st.markdown("""
-    <div class="admin-card">
-        <h3>Tendencia de riesgo</h3>
-        <div class="line-placeholder">
-            <p>📈 Gráfico de tendencia últimos 6 meses</p>
+    grafico_riesgo = pd.DataFrame({
+        "Nivel de riesgo": [
+            "Alto",
+            "Medio",
+            "Bajo"
+        ],
+        "Cantidad": [
+            cantidad_alto,
+            cantidad_medio,
+            cantidad_bajo
+        ]
+    })
+
+    if grafico_riesgo["Cantidad"].sum() == 0:
+        st.info("Todavía no existen resultados de riesgo.")
+
+    else:
+        st.bar_chart(
+            grafico_riesgo,
+            x="Nivel de riesgo",
+            y="Cantidad",
+            use_container_width=True
+        )
+
+
+with col_tendencia:
+
+    st.markdown(
+        """
+        <div class="section-title">
+            Tendencia de evaluaciones
         </div>
-        <p>🔴 Riesgo alto &nbsp;&nbsp; 🟡 Riesgo medio &nbsp;&nbsp; 🟢 Riesgo bajo</p>
-    </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True
+    )
 
-with col_c:
-    st.markdown("""
-    <div class="admin-card">
-        <h3>Alertas importantes</h3>
-        <div class="alert-box red-alert">⚠️ El 28% de los participantes tiene riesgo alto.</div>
-        <div class="alert-box yellow-alert">🔐 El uso de la misma contraseña es frecuente.</div>
-        <div class="alert-box blue-alert">ℹ️ Reforzar educación en phishing.</div>
+    if not encuestas:
+        st.info("Todavía no existen encuestas completadas.")
+
+    else:
+        df_encuestas = pd.DataFrame(encuestas)
+
+        df_encuestas["fecha_aplicacion"] = pd.to_datetime(
+            df_encuestas["fecha_aplicacion"],
+            errors="coerce"
+        )
+
+        tendencia = (
+            df_encuestas
+            .dropna(subset=["fecha_aplicacion"])
+            .assign(
+                fecha=lambda datos: (
+                    datos["fecha_aplicacion"]
+                    .dt.date
+                )
+            )
+            .groupby("fecha")
+            .size()
+            .reset_index(name="Encuestas")
+        )
+
+        st.line_chart(
+            tendencia,
+            x="fecha",
+            y="Encuestas",
+            use_container_width=True
+        )
+
+
+with col_alertas:
+
+    st.markdown(
+        """
+        <div class="section-title">
+            Alertas importantes
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    if not resultados:
+        st.info("Todavía no existen alertas.")
+
+    else:
+        if porcentaje_alto > 0:
+            st.error(
+                f"⚠️ {porcentaje_alto}% de los resultados "
+                "presenta riesgo alto."
+            )
+
+        if porcentaje_medio > 0:
+            st.warning(
+                f"🛡️ {porcentaje_medio}% de los resultados "
+                "presenta riesgo medio."
+            )
+
+        if porcentaje_bajo > 0:
+            st.success(
+                f"✅ {porcentaje_bajo}% de los resultados "
+                "presenta riesgo bajo."
+            )
+
+
+# =========================
+# HÁBITOS INSEGUROS
+# =========================
+
+st.write("")
+
+st.markdown(
+    """
+    <div class="section-title">
+        Hábitos inseguros más frecuentes
     </div>
-    """, unsafe_allow_html=True)
-    
+    """,
+    unsafe_allow_html=True
+)
+
+if not respuestas:
+    st.info("Todavía no existen respuestas para analizar.")
+
+else:
+    df_respuestas = pd.DataFrame(respuestas)
+
+    habitos = {
+        "Usa la misma contraseña": int(
+            df_respuestas["usa_misma_contrasena"].sum()
+        ),
+        "Usa Wi-Fi público": int(
+            df_respuestas["usa_wifi_publico"].sum()
+        ),
+        "No usa doble factor": int(
+            (~df_respuestas["usa_doble_factor"]).sum()
+        ),
+        "No tiene antivirus": int(
+            (~df_respuestas["tiene_antivirus"]).sum()
+        ),
+        "No actualiza contraseñas": int(
+            (~df_respuestas["actualiza_contrasenas"]).sum()
+        ),
+        "Comparte información en redes": int(
+            df_respuestas["comparte_info_redes"].sum()
+        )
+    }
+
+    df_habitos = (
+        pd.DataFrame(
+            list(habitos.items()),
+            columns=[
+                "Hábito inseguro",
+                "Cantidad"
+            ]
+        )
+        .sort_values(
+            "Cantidad",
+            ascending=False
+        )
+    )
+
+    st.bar_chart(
+        df_habitos,
+        x="Hábito inseguro",
+        y="Cantidad",
+        use_container_width=True
+    )

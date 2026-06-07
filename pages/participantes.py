@@ -317,8 +317,27 @@ with st.sidebar:
         st.switch_page("app.py")
 
 
+# =========================
+# NAVEGACIÓN
+# =========================
+
 if menu == "🏠 Inicio":
     st.switch_page("pages/dashboard.py")
+
+elif menu == "📝 Encuestas":
+    st.switch_page("pages/encuestas.py")
+
+elif menu == "🧹 Limpieza de datos":
+    st.switch_page("pages/limpieza.py")
+    
+elif menu == "💾 Respaldo y recuperación":
+    st.switch_page("pages/respaldo.py")
+    
+elif menu == "⚠️ Riesgo":
+    st.switch_page("pages/riesgo.py")
+    
+elif menu == "📄 Reportes":
+    st.switch_page("pages/reportes.py")
 
 
 # =========================

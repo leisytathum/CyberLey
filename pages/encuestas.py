@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import time
+from httpx import ConnectError, TimeoutException
 from dotenv import load_dotenv
 from supabase import Client, create_client
 
@@ -29,7 +31,6 @@ supabase: Client = create_client(
     SUPABASE_KEY
 )
 
-
 # =========================
 # RESTAURAR SESIÓN
 # =========================
@@ -38,10 +39,33 @@ access_token = st.session_state.get("access_token")
 refresh_token = st.session_state.get("refresh_token")
 
 if access_token and refresh_token:
-    supabase.auth.set_session(
-        access_token,
-        refresh_token
-    )
+
+    sesion_restaurada = False
+
+    for intento in range(2):
+        try:
+            supabase.auth.set_session(
+                access_token,
+                refresh_token
+            )
+
+            sesion_restaurada = True
+            break
+
+        except (TimeoutException, ConnectError):
+            if intento == 0:
+                time.sleep(1)
+
+    if not sesion_restaurada:
+        st.error(
+            "No se pudo conectar con Supabase en este momento. "
+            "Revisa tu conexión e intenta nuevamente."
+        )
+
+        if st.button("Reintentar conexión"):
+            st.rerun()
+
+        st.stop()
 
 
 # =========================
@@ -72,8 +96,6 @@ def cargar_css():
 
 
 cargar_css()
-
-
 # =========================
 # SIDEBAR
 # =========================
@@ -96,7 +118,8 @@ with st.sidebar:
             "👥 Participantes",
             "📝 Encuestas",
             "⚠️ Riesgo",
-            "📊 Limpieza de datos",
+            "🧹 Limpieza de datos",
+            "💾 Respaldo y recuperación",
             "📄 Reportes",
             "⚙️ Administración"
         ],
@@ -121,7 +144,17 @@ if menu == "🏠 Inicio":
 elif menu == "👥 Participantes":
     st.switch_page("pages/participantes.py")
 
-
+elif menu == "🧹 Limpieza de datos":
+    st.switch_page("pages/limpieza.py")
+    
+elif menu == "⚠️ Riesgo":
+    st.switch_page("pages/riesgo.py")
+    
+elif menu == "💾 Respaldo y recuperación":
+    st.switch_page("pages/respaldo.py")
+    
+elif menu == "⚙️ Administración":
+    st.switch_page("pages/administracion.py")
 # =========================
 # CONSULTAR ENCUESTAS
 # =========================
