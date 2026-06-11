@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-
+import html
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
@@ -14,7 +14,8 @@ from supabase import Client, create_client
 st.set_page_config(
     page_title="CyberLey | Panel Administrador",
     page_icon="🛡️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -60,7 +61,67 @@ if st.session_state.get("rol") != "admin":
     st.warning("Esta sección es exclusiva para administradores.")
     st.switch_page("pages/usuario.py")
 
+# =========================
+# DATOS DEL ADMINISTRADOR
+# =========================
 
+try:
+    perfil_admin_response = (
+        supabase
+        .table("perfiles")
+        .select("nombre_completo")
+        .eq(
+            "id",
+            st.session_state["usuario_id"]
+        )
+        .limit(1)
+        .execute()
+    )
+
+    perfiles_admin = (
+        perfil_admin_response.data
+        or []
+    )
+
+    if perfiles_admin:
+        nombre_admin = (
+            perfiles_admin[0]
+            .get("nombre_completo")
+            or "Administrador"
+        )
+
+    else:
+        nombre_admin = "Administrador"
+
+except Exception:
+    nombre_admin = st.session_state.get(
+        "nombre",
+        "Administrador"
+    )
+
+
+# Actualizar también la sesión
+st.session_state["nombre"] = nombre_admin
+
+nombre_admin_seguro = html.escape(
+    str(nombre_admin)
+)
+
+partes_nombre = nombre_admin_seguro.split()
+
+if len(partes_nombre) >= 2:
+    iniciales_admin = (
+        partes_nombre[0][0]
+        + partes_nombre[1][0]
+    ).upper()
+
+elif len(partes_nombre) == 1:
+    iniciales_admin = (
+        partes_nombre[0][0]
+    ).upper()
+
+else:
+    iniciales_admin = "A"
 # =========================
 # CARGAR CSS
 # =========================
@@ -98,8 +159,16 @@ def consultar_tabla(
 
 try:
     participantes = consultar_tabla(
-        "participantes",
-        "id_participante, nombre_completo, ciudad, nivel_educativo"
+    "participantes",
+    (
+        "id_participante, id_usuario, nombre_completo, "
+        "ciudad, nivel_educativo"
+    )
+    )
+
+    perfiles = consultar_tabla(
+        "perfiles",
+        "id, rol"
     )
 
     encuestas = consultar_tabla(
@@ -126,7 +195,47 @@ except Exception as error:
     st.write(error)
     st.stop()
 
+# =========================
+# EXCLUIR ADMINISTRADORES
+# =========================
 
+df_participantes = pd.DataFrame(
+    participantes
+)
+
+df_perfiles = pd.DataFrame(
+    perfiles
+)
+
+if (
+    not df_participantes.empty
+    and not df_perfiles.empty
+):
+
+    df_participantes = (
+        df_participantes
+        .merge(
+            df_perfiles,
+            left_on="id_usuario",
+            right_on="id",
+            how="left"
+        )
+    )
+
+    df_participantes = (
+        df_participantes[
+            df_participantes["rol"]
+            == "usuario"
+        ]
+        .copy()
+    )
+
+    participantes = (
+        df_participantes
+        .to_dict(
+            orient="records"
+        )
+    )
 # =========================
 # PROCESAR MÉTRICAS
 # =========================
@@ -257,35 +366,43 @@ elif menu == "⚙️ Administración":
 # ENCABEZADO
 # =========================
 
-nombre_admin = st.session_state.get(
-    "nombre",
-    "Administrador"
-)
-
 st.markdown(
     f"""
 <div class="topbar">
-<div class="menu-icon">☰</div>
-<div class="admin-info">
-<span class="bell">🔔</span>
-<span class="admin-avatar">👤</span>
-<div>
-<b>{nombre_admin}</b><br>
+<div class="topbar-left">
+<span class="topbar-label">Panel administrativo</span>
+</div>
+
+<div class="topbar-right">
+<div class="notification-wrapper">
+<span class="notification-icon">🔔</span>
+<span class="notification-dot"></span>
+</div>
+
+<div class="admin-avatar">{iniciales_admin}</div>
+
+<div class="admin-profile-text">
+<strong>{nombre_admin_seguro}</strong>
 <small>Rol: Administrador</small>
 </div>
 </div>
 </div>
 
 <div class="dashboard-header">
-<div>
-<h1>¡Bienvenida, {nombre_admin}! 👋</h1>
-<p>Resumen real de los hábitos digitales y niveles de riesgo registrados.</p>
+<div class="welcome-content">
+<span class="welcome-badge">Panel de control</span>
+
+<h1>¡Bienvenida, {nombre_admin_seguro}! 👋</h1>
+
+<p>
+Consulta el resumen general de participantes,
+evaluaciones y niveles de riesgo digital.
+</p>
 </div>
 </div>
 """,
     unsafe_allow_html=True
 )
-
 
 # =========================
 # TARJETAS DE MÉTRICAS
@@ -517,25 +634,66 @@ else:
     df_respuestas = pd.DataFrame(respuestas)
 
     habitos = {
-        "Usa la misma contraseña": int(
-            df_respuestas["usa_misma_contrasena"].sum()
-        ),
-        "Usa Wi-Fi público": int(
-            df_respuestas["usa_wifi_publico"].sum()
-        ),
-        "No usa doble factor": int(
-            (~df_respuestas["usa_doble_factor"]).sum()
-        ),
-        "No tiene antivirus": int(
-            (~df_respuestas["tiene_antivirus"]).sum()
-        ),
-        "No actualiza contraseñas": int(
-            (~df_respuestas["actualiza_contrasenas"]).sum()
-        ),
-        "Comparte información en redes": int(
-            df_respuestas["comparte_info_redes"].sum()
+    "Usa la misma contraseña": int(
+        df_respuestas[
+            "usa_misma_contrasena"
+        ]
+        .fillna(False)
+        .astype(bool)
+        .sum()
+    ),
+
+    "Usa Wi-Fi público": int(
+        df_respuestas[
+            "usa_wifi_publico"
+        ]
+        .fillna(False)
+        .astype(bool)
+        .sum()
+    ),
+
+    "No usa doble factor": int(
+        (
+            ~df_respuestas[
+                "usa_doble_factor"
+            ]
+            .fillna(False)
+            .astype(bool)
         )
-    }
+        .sum()
+    ),
+
+    "No tiene antivirus": int(
+        (
+            ~df_respuestas[
+                "tiene_antivirus"
+            ]
+            .fillna(False)
+            .astype(bool)
+        )
+        .sum()
+    ),
+
+    "No actualiza contraseñas": int(
+        (
+            ~df_respuestas[
+                "actualiza_contrasenas"
+            ]
+            .fillna(False)
+            .astype(bool)
+        )
+        .sum()
+    ),
+
+    "Comparte información en redes": int(
+        df_respuestas[
+            "comparte_info_redes"
+        ]
+        .fillna(False)
+        .astype(bool)
+        .sum()
+    )
+}
 
     df_habitos = (
         pd.DataFrame(

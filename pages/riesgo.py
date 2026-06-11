@@ -17,7 +17,8 @@ from supabase import Client, create_client
 st.set_page_config(
     page_title="CyberLey | Análisis de riesgo",
     page_icon="⚠️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 ROOT_DIR = Path(__file__).resolve().parents[1]

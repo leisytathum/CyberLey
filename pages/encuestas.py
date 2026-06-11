@@ -16,7 +16,8 @@ from supabase import Client, create_client
 st.set_page_config(
     page_title="CyberLey | Encuestas",
     page_icon="📝",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 ROOT_DIR = Path(__file__).resolve().parents[1]

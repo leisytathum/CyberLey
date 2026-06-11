@@ -23,12 +23,32 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(
     page_title="CyberLey Login",
     page_icon="🔐",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="expanded"
 )
 def cargar_css():
     with open("css/styles.css", "r", encoding="utf-8") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 cargar_css()
+# =========================
+# OCULTAR SIDEBAR SOLO EN LOGIN
+# =========================
+
+st.markdown(
+    """
+    <style>
+    [data-testid="stSidebar"] {
+        display: none !important;
+    }
+
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] {
+        display: none !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 col1, col2 = st.columns([1.1, 1])
 

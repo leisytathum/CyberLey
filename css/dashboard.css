@@ -359,3 +359,365 @@
     padding: 12px;
     box-shadow: 0 10px 26px rgba(139, 92, 246, 0.06);
 }
+/* =========================
+   SIDEBAR ADMIN MODERNO
+========================= */
+
+[data-testid="stSidebar"] {
+    background:
+        linear-gradient(
+            180deg,
+            #071426 0%,
+            #0b1d35 100%
+        );
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+[data-testid="stSidebar"] [data-testid="stImage"] {
+    padding: 8px 18px 4px 18px;
+}
+
+.sidebar-title {
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 800;
+    margin: 12px 8px 16px 8px;
+    letter-spacing: 0.2px;
+}
+
+/* Contenedor de opciones */
+[data-testid="stSidebar"] div[role="radiogroup"] {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Cada opción del menú */
+[data-testid="stSidebar"] div[role="radiogroup"] label {
+    width: 100%;
+    padding: 11px 12px;
+    margin: 0;
+    border-radius: 11px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+/* Ocultar solo el círculo del radio */
+[data-testid="stSidebar"] div[role="radiogroup"] input[type="radio"] {
+    display: none;
+}
+
+/* Mantener visible el texto */
+[data-testid="stSidebar"] div[role="radiogroup"] label p {
+    display: block;
+    margin: 0;
+    color: #f8fafc !important;
+    font-size: 14px;
+    font-weight: 650;
+}
+
+/* Efecto al pasar el mouse */
+[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+    background: rgba(139, 92, 246, 0.18);
+    transform: translateX(3px);
+}
+
+/* Opción activa */
+[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(139, 92, 246, 0.95),
+            rgba(239, 35, 60, 0.88)
+        );
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.22);
+}
+
+[data-testid="stSidebar"] hr {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Botón cerrar sesión */
+[data-testid="stSidebar"] .stButton > button {
+    min-height: 45px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    background: rgba(239, 35, 60, 0.14);
+    color: #fecaca;
+    box-shadow: none;
+}
+
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(239, 35, 60, 0.24);
+    color: #ffffff;
+}
+/* =========================
+   OCULTAR CÍRCULOS DEL RADIO
+========================= */
+
+/* Ocultar el input real */
+[data-testid="stSidebar"] div[role="radiogroup"] input[type="radio"] {
+    display: none !important;
+}
+
+/* Ocultar el círculo visual generado por Streamlit */
+[data-testid="stSidebar"] div[role="radiogroup"] label
+div[data-testid="stMarkdownContainer"]
+~ div {
+    display: none !important;
+}
+
+/* Ocultar contenedor interno del indicador */
+[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {
+    display: none !important;
+}
+
+/* Mantener el texto visible y alineado */
+[data-testid="stSidebar"] div[role="radiogroup"] label p {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #f8fafc !important;
+    font-size: 14px;
+    font-weight: 650;
+}
+
+/* Ajustar espacio al quitar los círculos */
+[data-testid="stSidebar"] div[role="radiogroup"] label {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px !important;
+    gap: 0 !important;
+}
+/* =========================
+   TOPBAR MODERNA
+========================= */
+
+.topbar {
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 -28px 26px -28px;
+    padding: 0 28px;
+    background: rgba(255, 255, 255, 0.97);
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.035);
+}
+
+.topbar-left,
+.topbar-right {
+    display: flex;
+    align-items: center;
+}
+
+.topbar-right {
+    gap: 13px;
+}
+
+.menu-icon {
+    color: #334155;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.notification-wrapper {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+}
+
+.notification-icon {
+    font-size: 18px;
+}
+
+.notification-dot {
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef233c;
+    border: 2px solid white;
+}
+
+.admin-avatar {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background:
+        linear-gradient(
+            135deg,
+            #8b5cf6,
+            #ef233c
+        );
+    color: white !important;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.4px;
+    box-shadow: 0 8px 18px rgba(139, 92, 246, 0.20);
+}
+
+.admin-profile-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 155px;
+}
+
+.admin-profile-text strong {
+    color: #111827 !important;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.admin-profile-text small {
+    margin-top: 3px;
+    color: #64748b !important;
+    font-size: 12px;
+}
+
+
+/* =========================
+   BIENVENIDA DEL DASHBOARD
+========================= */
+
+.dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding: 22px 24px;
+    border-radius: 18px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(139, 92, 246, 0.11),
+            rgba(239, 35, 60, 0.06)
+        ),
+        #ffffff;
+    border: 1px solid #eee7ff;
+    box-shadow: 0 12px 30px rgba(139, 92, 246, 0.06);
+}
+
+.welcome-badge {
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: #ede9fe;
+    color: #7c3aed;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.dashboard-header h1 {
+    margin: 0;
+    color: #111827;
+    font-size: 29px;
+    font-weight: 850;
+    letter-spacing: -0.4px;
+}
+
+.dashboard-header p {
+    margin: 7px 0 0 0;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+
+/* =========================
+   TARJETAS MODERNAS
+========================= */
+
+.metric-card {
+    min-height: 150px;
+    padding: 20px;
+    border: 1px solid #e8edf5;
+    border-radius: 17px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+    transition: all 0.22s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.09);
+}
+
+.metric-card p {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.metric-card h2 {
+    color: #0f172a;
+    font-size: 32px;
+    letter-spacing: -0.7px;
+}
+
+.metric-card small {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.metric-icon {
+    width: 54px;
+    height: 54px;
+    flex-shrink: 0;
+    border-radius: 16px;
+    font-size: 23px;
+}
+
+
+/* =========================
+   LIMPIAR ELEMENTOS NATIVOS
+========================= */
+
+[data-testid="stToolbar"] {
+    display: none;
+}
+
+[data-testid="stDecoration"] {
+    display: none;
+}
+
+#MainMenu {
+    visibility: hidden;
+}
+
+footer {
+    visibility: hidden;
+}
+/* =========================
+   MOSTRAR SIDEBAR EN PÁGINAS INTERNAS
+========================= */
+
+[data-testid="stSidebar"] {
+    display: block !important;
+    visibility: visible !important;
+}
+
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+.topbar-label {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 800;
+}
