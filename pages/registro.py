@@ -26,25 +26,6 @@ def cargar_css():
 
 
 cargar_css()
-# =========================
-# OCULTAR SIDEBAR SOLO EN REGISTRO
-# =========================
-
-st.markdown(
-    """
-    <style>
-    [data-testid="stSidebar"] {
-        display: none !important;
-    }
-
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapsedControl"] {
-        display: none !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 # =========================
 # DISEÑO EN DOS COLUMNAS

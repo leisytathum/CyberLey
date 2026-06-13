@@ -680,15 +680,15 @@ div[data-testid="stMarkdownContainer"]
     border-radius: 16px;
     font-size: 23px;
 }
-
-
 /* =========================
    LIMPIAR ELEMENTOS NATIVOS
 ========================= */
 
-[data-testid="stToolbar"] {
-    display: none;
-}
+/*
+No ocultar stToolbar:
+Streamlit lo utiliza para mostrar el botón
+que permite volver a abrir el sidebar.
+*/
 
 [data-testid="stDecoration"] {
     display: none;
@@ -700,24 +700,4 @@ div[data-testid="stMarkdownContainer"]
 
 footer {
     visibility: hidden;
-}
-/* =========================
-   MOSTRAR SIDEBAR EN PÁGINAS INTERNAS
-========================= */
-
-[data-testid="stSidebar"] {
-    display: block !important;
-    visibility: visible !important;
-}
-
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-.topbar-label {
-    color: #334155;
-    font-size: 14px;
-    font-weight: 800;
 }

@@ -120,6 +120,7 @@ with st.sidebar:
             "📝 Encuestas",
             "⚠️ Riesgo",
             "🧹 Limpieza de datos",
+            "📥 Importar datos históricos",
             "💾 Respaldo y recuperación",
             "📄 Reportes",
             "⚙️ Administración"
@@ -147,6 +148,9 @@ elif menu == "👥 Participantes":
 
 elif menu == "🧹 Limpieza de datos":
     st.switch_page("pages/limpieza.py")
+
+elif menu == "📥 Importar datos históricos":
+    st.switch_page("pages/importar_datos.py")
     
 elif menu == "⚠️ Riesgo":
     st.switch_page("pages/riesgo.py")

@@ -291,6 +291,7 @@ with st.sidebar:
             "📝 Encuestas",
             "⚠️ Riesgo",
             "🧹 Limpieza de datos",
+            
             "💾 Respaldo y recuperación",
             "📄 Reportes",
             "⚙️ Administración"
