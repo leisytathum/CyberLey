@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import html
+
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
@@ -61,6 +62,7 @@ if st.session_state.get("rol") != "admin":
     st.warning("Esta sección es exclusiva para administradores.")
     st.switch_page("pages/usuario.py")
 
+
 # =========================
 # DATOS DEL ADMINISTRADOR
 # =========================
@@ -100,7 +102,6 @@ except Exception:
     )
 
 
-# Actualizar también la sesión
 st.session_state["nombre"] = nombre_admin
 
 nombre_admin_seguro = html.escape(
@@ -122,6 +123,8 @@ elif len(partes_nombre) == 1:
 
 else:
     iniciales_admin = "A"
+
+
 # =========================
 # CARGAR CSS
 # =========================
@@ -129,7 +132,11 @@ else:
 def cargar_css():
     ruta_css = ROOT_DIR / "css" / "dashboard.css"
 
-    with open(ruta_css, "r", encoding="utf-8") as archivo:
+    with open(
+        ruta_css,
+        "r",
+        encoding="utf-8"
+    ) as archivo:
         st.markdown(
             f"<style>{archivo.read()}</style>",
             unsafe_allow_html=True
@@ -147,6 +154,7 @@ def consultar_tabla(
     nombre_tabla: str,
     columnas: str = "*"
 ) -> list[dict]:
+
     respuesta = (
         supabase
         .table(nombre_tabla)
@@ -159,11 +167,11 @@ def consultar_tabla(
 
 try:
     participantes = consultar_tabla(
-    "participantes",
-    (
-        "id_participante, id_usuario, nombre_completo, "
-        "ciudad, nivel_educativo"
-    )
+        "participantes",
+        (
+            "id_participante, id_usuario, nombre_completo, "
+            "ciudad, nivel_educativo"
+        )
     )
 
     perfiles = consultar_tabla(
@@ -171,22 +179,17 @@ try:
         "id, rol"
     )
 
-    encuestas = consultar_tabla(
-        "encuestas",
-        "id_encuesta, id_participante, fecha_aplicacion, estado"
-    )
-
-    resultados = consultar_tabla(
-        "resultados_riesgo",
-        "id_encuesta, puntaje_riesgo, clasificacion_riesgo, fecha_calculo"
-    )
-
-    respuestas = consultar_tabla(
-        "respuestas_encuesta",
+    respuestas_ciberseguridad = consultar_tabla(
+        "respuestas_encuesta_ciberseguridad",
         (
-            "id_encuesta, usa_misma_contrasena, usa_wifi_publico, "
-            "reconoce_phishing, usa_doble_factor, tiene_antivirus, "
-            "actualiza_contrasenas, comparte_info_redes"
+            "id_respuesta, id_usuario, fecha_respuesta, usa_nube, "
+            "plataforma_nube, contenido_nube, nivel_conocimiento, "
+            "manejo_ciberseguridad, frecuencia_info_seguridad, "
+            "reconoce_phishing, identifica_herramientas_seguridad, "
+            "estado_antivirus, tipo_conexion, estabilidad_conexion, "
+            "frecuencia_fallas_internet, cambio_contrasenas_anual, "
+            "reutiliza_contrasenas, importancia_actualizar_contrasenas, "
+            "puntaje_riesgo, clasificacion_riesgo, observacion"
         )
     )
 
@@ -194,6 +197,7 @@ except Exception as error:
     st.error("No se pudieron cargar los datos del dashboard.")
     st.write(error)
     st.stop()
+
 
 # =========================
 # EXCLUIR ADMINISTRADORES
@@ -224,8 +228,7 @@ if (
 
     df_participantes = (
         df_participantes[
-            df_participantes["rol"]
-            == "usuario"
+            df_participantes["rol"] == "usuario"
         ]
         .copy()
     )
@@ -236,14 +239,18 @@ if (
             orient="records"
         )
     )
+
+
 # =========================
 # PROCESAR MÉTRICAS
 # =========================
 
 total_participantes = len(participantes)
-total_encuestas = len(encuestas)
+total_encuestas = len(respuestas_ciberseguridad)
 
-df_resultados = pd.DataFrame(resultados)
+df_resultados = pd.DataFrame(
+    respuestas_ciberseguridad
+)
 
 if df_resultados.empty:
     cantidad_alto = 0
@@ -270,7 +277,11 @@ else:
     )
 
 
-def calcular_porcentaje(cantidad: int, total: int) -> float:
+def calcular_porcentaje(
+    cantidad: int,
+    total: int
+) -> float:
+
     if total == 0:
         return 0
 
@@ -282,17 +293,17 @@ def calcular_porcentaje(cantidad: int, total: int) -> float:
 
 porcentaje_alto = calcular_porcentaje(
     cantidad_alto,
-    len(resultados)
+    total_encuestas
 )
 
 porcentaje_medio = calcular_porcentaje(
     cantidad_medio,
-    len(resultados)
+    total_encuestas
 )
 
 porcentaje_bajo = calcular_porcentaje(
     cantidad_bajo,
-    len(resultados)
+    total_encuestas
 )
 
 
@@ -349,22 +360,24 @@ if menu == "👥 Participantes":
 elif menu == "📝 Encuestas":
     st.switch_page("pages/encuestas.py")
 
-elif menu == "🧹 Limpieza de datos":
-    st.switch_page("pages/limpieza.py")
-    
-elif menu == "📥 Importar datos históricos":
-    st.switch_page("pages/importar_datos.py")
-    
-elif menu == "💾 Respaldo y recuperación":
-    st.switch_page("pages/respaldo.py")
-    
 elif menu == "⚠️ Riesgo":
     st.switch_page("pages/riesgo.py")
-    
+
+elif menu == "🧹 Limpieza de datos":
+    st.switch_page("pages/limpieza.py")
+
+elif menu == "📥 Importar datos históricos":
+    st.switch_page("pages/importar_datos.py")
+
+elif menu == "💾 Respaldo y recuperación":
+    st.switch_page("pages/respaldo.py")
+
 elif menu == "📄 Reportes":
     st.switch_page("pages/reportes.py")
+
 elif menu == "⚙️ Administración":
     st.switch_page("pages/administracion.py")
+
 
 # =========================
 # ENCABEZADO
@@ -407,6 +420,7 @@ evaluaciones y niveles de riesgo digital.
 """,
     unsafe_allow_html=True
 )
+
 
 # =========================
 # TARJETAS DE MÉTRICAS
@@ -549,29 +563,35 @@ with col_tendencia:
         unsafe_allow_html=True
     )
 
-    if not encuestas:
+    if not respuestas_ciberseguridad:
         st.info("Todavía no existen encuestas completadas.")
 
     else:
-        df_encuestas = pd.DataFrame(encuestas)
+        df_encuestas = pd.DataFrame(
+            respuestas_ciberseguridad
+        )
 
-        df_encuestas["fecha_aplicacion"] = pd.to_datetime(
-            df_encuestas["fecha_aplicacion"],
+        df_encuestas["fecha_respuesta"] = pd.to_datetime(
+            df_encuestas["fecha_respuesta"],
             errors="coerce"
         )
 
         tendencia = (
             df_encuestas
-            .dropna(subset=["fecha_aplicacion"])
+            .dropna(
+                subset=["fecha_respuesta"]
+            )
             .assign(
                 fecha=lambda datos: (
-                    datos["fecha_aplicacion"]
+                    datos["fecha_respuesta"]
                     .dt.date
                 )
             )
             .groupby("fecha")
             .size()
-            .reset_index(name="Encuestas")
+            .reset_index(
+                name="Encuestas"
+            )
         )
 
         st.line_chart(
@@ -593,7 +613,7 @@ with col_alertas:
         unsafe_allow_html=True
     )
 
-    if not resultados:
+    if not respuestas_ciberseguridad:
         st.info("Todavía no existen alertas.")
 
     else:
@@ -631,73 +651,72 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-if not respuestas:
+if not respuestas_ciberseguridad:
     st.info("Todavía no existen respuestas para analizar.")
 
 else:
-    df_respuestas = pd.DataFrame(respuestas)
+    df_respuestas = pd.DataFrame(
+        respuestas_ciberseguridad
+    )
 
     habitos = {
-    "Usa la misma contraseña": int(
-        df_respuestas[
-            "usa_misma_contrasena"
-        ]
-        .fillna(False)
-        .astype(bool)
-        .sum()
-    ),
+        "Reutiliza contraseñas": int(
+            df_respuestas[
+                df_respuestas["reutiliza_contrasenas"].isin(
+                    [
+                        "Sí",
+                        "A veces"
+                    ]
+                )
+            ].shape[0]
+        ),
 
-    "Usa Wi-Fi público": int(
-        df_respuestas[
-            "usa_wifi_publico"
-        ]
-        .fillna(False)
-        .astype(bool)
-        .sum()
-    ),
+        "No reconoce phishing": int(
+            df_respuestas[
+                df_respuestas["reconoce_phishing"].isin(
+                    [
+                        "No",
+                        "A veces"
+                    ]
+                )
+            ].shape[0]
+        ),
 
-    "No usa doble factor": int(
-        (
-            ~df_respuestas[
-                "usa_doble_factor"
-            ]
-            .fillna(False)
-            .astype(bool)
+        "Antivirus desactualizado o ausente": int(
+            df_respuestas[
+                df_respuestas["estado_antivirus"].isin(
+                    [
+                        "No tengo antivirus",
+                        "Tengo antivirus, pero no está actualizado",
+                        "No sé"
+                    ]
+                )
+            ].shape[0]
+        ),
+
+        "Bajo conocimiento": int(
+            df_respuestas[
+                df_respuestas["nivel_conocimiento"] == "Bajo"
+            ].shape[0]
+        ),
+
+        "Nunca cambia contraseñas": int(
+            df_respuestas[
+                df_respuestas["cambio_contrasenas_anual"] == "Nunca"
+            ].shape[0]
+        ),
+
+        "Poca información de seguridad": int(
+            df_respuestas[
+                df_respuestas["frecuencia_info_seguridad"].isin(
+                    [
+                        "Nunca",
+                        "Rara vez"
+                    ]
+                )
+            ].shape[0]
         )
-        .sum()
-    ),
-
-    "No tiene antivirus": int(
-        (
-            ~df_respuestas[
-                "tiene_antivirus"
-            ]
-            .fillna(False)
-            .astype(bool)
-        )
-        .sum()
-    ),
-
-    "No actualiza contraseñas": int(
-        (
-            ~df_respuestas[
-                "actualiza_contrasenas"
-            ]
-            .fillna(False)
-            .astype(bool)
-        )
-        .sum()
-    ),
-
-    "Comparte información en redes": int(
-        df_respuestas[
-            "comparte_info_redes"
-        ]
-        .fillna(False)
-        .astype(bool)
-        .sum()
-    )
-}
+    }
 
     df_habitos = (
         pd.DataFrame(
@@ -718,4 +737,58 @@ else:
         x="Hábito inseguro",
         y="Cantidad",
         use_container_width=True
+    )
+
+
+# =========================
+# TABLA DE ÚLTIMAS EVALUACIONES
+# =========================
+
+st.write("")
+
+st.markdown(
+    """
+    <div class="section-title">
+        Últimas evaluaciones registradas
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+if not respuestas_ciberseguridad:
+    st.info("Todavía no existen evaluaciones registradas.")
+
+else:
+    df_ultimas = pd.DataFrame(
+        respuestas_ciberseguridad
+    )
+
+    df_ultimas["fecha_respuesta"] = pd.to_datetime(
+        df_ultimas["fecha_respuesta"],
+        errors="coerce"
+    )
+
+    columnas_mostrar = [
+        "fecha_respuesta",
+        "nivel_conocimiento",
+        "reconoce_phishing",
+        "estado_antivirus",
+        "reutiliza_contrasenas",
+        "puntaje_riesgo",
+        "clasificacion_riesgo"
+    ]
+
+    df_ultimas = (
+        df_ultimas[columnas_mostrar]
+        .sort_values(
+            "fecha_respuesta",
+            ascending=False
+        )
+        .head(10)
+    )
+
+    st.dataframe(
+        df_ultimas,
+        use_container_width=True,
+        hide_index=True
     )

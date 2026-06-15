@@ -69,7 +69,11 @@ if st.session_state.get("rol") != "admin":
 def cargar_css():
     ruta_css = ROOT_DIR / "css" / "dashboard.css"
 
-    with open(ruta_css, "r", encoding="utf-8") as archivo:
+    with open(
+        ruta_css,
+        "r",
+        encoding="utf-8"
+    ) as archivo:
         st.markdown(
             f"<style>{archivo.read()}</style>",
             unsafe_allow_html=True
@@ -77,25 +81,21 @@ def cargar_css():
 
 
 cargar_css()
+
+
 # =========================
-# NOTIFICACIONES TEMPORALES
+# NOTIFICACIONES
 # =========================
 
 def guardar_notificacion(
     mensaje: str,
     icono: str = "✅"
 ):
-    """
-    Guarda una notificación para mostrarla después de recargar la página.
-    """
     st.session_state["toast_mensaje"] = mensaje
     st.session_state["toast_icono"] = icono
 
 
 def mostrar_notificacion_pendiente():
-    """
-    Muestra la notificación una sola vez y luego la elimina.
-    """
     mensaje = st.session_state.pop(
         "toast_mensaje",
         None
@@ -115,224 +115,6 @@ def mostrar_notificacion_pendiente():
 
 
 mostrar_notificacion_pendiente()
-
-# =========================
-# CONSULTAS A SUPABASE
-# =========================
-
-def consultar_tabla(
-    nombre_tabla: str,
-    columnas: str = "*"
-) -> list[dict]:
-
-    respuesta = (
-        supabase
-        .table(nombre_tabla)
-        .select(columnas)
-        .execute()
-    )
-
-    return respuesta.data or []
-
-
-# =========================
-# FUNCIONES DE LIMPIEZA
-# =========================
-
-def normalizar_texto(valor) -> str:
-    """
-    Elimina espacios al inicio, al final y repetidos.
-    También aplica formato de título.
-
-    Ejemplo:
-    '  la   ceiba ' -> 'La Ceiba'
-    """
-
-    if valor is None:
-        return ""
-
-    texto = str(valor).strip()
-
-    if texto == "":
-        return ""
-
-    return " ".join(texto.split()).title()
-
-
-def normalizar_genero(valor) -> str:
-    """
-    Normaliza variantes comunes de género.
-    """
-
-    texto = normalizar_texto(valor)
-
-    equivalencias = {
-        "Femenino": "Femenino",
-        "Masculino": "Masculino",
-        "Otro": "Otro",
-        "Prefiero No Responder": "Prefiero no responder"
-    }
-
-    return equivalencias.get(texto, texto)
-
-
-def normalizar_nivel_educativo(valor) -> str:
-    """
-    Normaliza variantes comunes del nivel educativo.
-    """
-
-    texto = normalizar_texto(valor)
-
-    equivalencias = {
-        "Secundaria": "Secundaria",
-        "Universidad": "Universidad",
-        "Técnico": "Técnico",
-        "Tecnico": "Técnico",
-        "Posgrado": "Posgrado",
-        "Otro": "Otro"
-    }
-
-    return equivalencias.get(texto, texto)
-
-
-def preparar_cambios(df_participantes: pd.DataFrame) -> pd.DataFrame:
-    """
-    Compara valores actuales con valores limpios y genera
-    una vista previa de los cambios seguros.
-    """
-
-    cambios = []
-
-    for _, fila in df_participantes.iterrows():
-
-        nombre_original = fila.get("nombre_completo")
-        ciudad_original = fila.get("ciudad")
-        genero_original = fila.get("genero")
-        nivel_original = fila.get("nivel_educativo")
-
-        nombre_limpio = normalizar_texto(nombre_original)
-        ciudad_limpia = normalizar_texto(ciudad_original)
-        genero_limpio = normalizar_genero(genero_original)
-        nivel_limpio = normalizar_nivel_educativo(nivel_original)
-
-        datos_actualizados = {}
-
-        if nombre_limpio and nombre_limpio != nombre_original:
-            datos_actualizados["nombre_completo"] = nombre_limpio
-
-        if ciudad_limpia and ciudad_limpia != ciudad_original:
-            datos_actualizados["ciudad"] = ciudad_limpia
-
-        if genero_limpio and genero_limpio != genero_original:
-            datos_actualizados["genero"] = genero_limpio
-
-        if nivel_limpio and nivel_limpio != nivel_original:
-            datos_actualizados["nivel_educativo"] = nivel_limpio
-
-        if datos_actualizados:
-            cambios.append({
-                "id_participante": fila["id_participante"],
-                "Nombre actual": nombre_original,
-                "Nombre limpio": nombre_limpio,
-                "Ciudad actual": ciudad_original,
-                "Ciudad limpia": ciudad_limpia,
-                "Género actual": genero_original,
-                "Género limpio": genero_limpio,
-                "Nivel actual": nivel_original,
-                "Nivel limpio": nivel_limpio,
-                "_datos_actualizados": datos_actualizados
-            })
-
-    return pd.DataFrame(cambios)
-
-
-def aplicar_cambios(df_cambios: pd.DataFrame) -> int:
-    """
-    Actualiza únicamente las filas con correcciones seguras.
-    """
-
-    total_actualizados = 0
-
-    for _, fila in df_cambios.iterrows():
-
-        datos_actualizados = fila["_datos_actualizados"]
-
-        if datos_actualizados:
-            (
-                supabase
-                .table("participantes")
-                .update(datos_actualizados)
-                .eq(
-                    "id_participante",
-                    fila["id_participante"]
-                )
-                .execute()
-            )
-
-            total_actualizados += 1
-
-    return total_actualizados
-
-
-# =========================
-# CARGAR DATOS
-# =========================
-
-try:
-    participantes = consultar_tabla(
-        "participantes",
-        (
-            "id_participante, id_usuario, nombre_completo, "
-            "edad, genero, ciudad, nivel_educativo, fecha_registro"
-        )
-    )
-
-    perfiles = consultar_tabla(
-        "perfiles",
-        "id, rol"
-    )
-
-    encuestas = consultar_tabla(
-        "encuestas",
-        "id_encuesta, id_participante, fecha_aplicacion, estado"
-    )
-
-    respuestas = consultar_tabla(
-        "respuestas_encuesta",
-        "id_respuesta, id_encuesta"
-    )
-
-    resultados = consultar_tabla(
-        "resultados_riesgo",
-        "id_resultado, id_encuesta"
-    )
-
-except Exception as error:
-    st.error("No se pudieron cargar los datos.")
-    st.write(error)
-    st.stop()
-
-
-# =========================
-# FILTRAR SOLO PARTICIPANTES
-# =========================
-
-df_participantes = pd.DataFrame(participantes)
-df_perfiles = pd.DataFrame(perfiles)
-
-if not df_participantes.empty and not df_perfiles.empty:
-
-    df_participantes = df_participantes.merge(
-        df_perfiles,
-        left_on="id_usuario",
-        right_on="id",
-        how="left"
-    )
-
-    # No incluir administradores en el análisis
-    df_participantes = df_participantes[
-        df_participantes["rol"] == "usuario"
-    ].copy()
 
 
 # =========================
@@ -391,23 +173,502 @@ elif menu == "👥 Participantes":
 elif menu == "📝 Encuestas":
     st.switch_page("pages/encuestas.py")
 
-elif menu == "🧹 Limpieza de datos":
-    st.switch_page("pages/limpieza.py")
-    
+elif menu == "⚠️ Riesgo":
+    st.switch_page("pages/riesgo.py")
+
 elif menu == "📥 Importar datos históricos":
     st.switch_page("pages/importar_datos.py")
 
 elif menu == "💾 Respaldo y recuperación":
     st.switch_page("pages/respaldo.py")
-    
-elif menu == "⚠️ Riesgo":
-    st.switch_page("pages/riesgo.py")
-    
+
 elif menu == "📄 Reportes":
     st.switch_page("pages/reportes.py")
-    
+
 elif menu == "⚙️ Administración":
     st.switch_page("pages/administracion.py")
+
+
+# =========================
+# CONSULTAS A SUPABASE
+# =========================
+
+def consultar_tabla(
+    nombre_tabla: str,
+    columnas: str = "*"
+) -> list[dict]:
+
+    respuesta = (
+        supabase
+        .table(nombre_tabla)
+        .select(columnas)
+        .execute()
+    )
+
+    return respuesta.data or []
+
+
+# =========================
+# FUNCIONES DE LIMPIEZA
+# =========================
+
+def normalizar_texto(valor) -> str:
+    if valor is None:
+        return ""
+
+    texto = str(valor).strip()
+
+    if texto == "":
+        return ""
+
+    return " ".join(
+        texto.split()
+    ).title()
+
+
+def normalizar_genero(valor) -> str:
+    texto = normalizar_texto(valor)
+
+    equivalencias = {
+        "Femenino": "Femenino",
+        "Masculino": "Masculino",
+        "Otro": "Otro",
+        "Prefiero No Responder": "Prefiero no responder"
+    }
+
+    return equivalencias.get(
+        texto,
+        texto
+    )
+
+
+def normalizar_nivel_educativo(valor) -> str:
+    texto = normalizar_texto(valor)
+
+    equivalencias = {
+        "Secundaria": "Secundaria",
+        "Universidad": "Universidad",
+        "Técnico": "Técnico",
+        "Tecnico": "Técnico",
+        "Posgrado": "Posgrado",
+        "Otro": "Otro"
+    }
+
+    return equivalencias.get(
+        texto,
+        texto
+    )
+
+
+def normalizar_si_no(valor) -> str:
+    texto = str(valor).strip()
+
+    equivalencias = {
+        "Si": "Sí",
+        "si": "Sí",
+        "SI": "Sí",
+        "Sí": "Sí",
+        "No": "No",
+        "no": "No"
+    }
+
+    return equivalencias.get(
+        texto,
+        texto
+    )
+
+
+def normalizar_tipo_conexion(valor) -> str:
+    texto = normalizar_texto(valor)
+
+    equivalencias = {
+        "Wifi": "Wi-Fi",
+        "Wi Fi": "Wi-Fi",
+        "Wi-Fi": "Wi-Fi",
+        "Rauter": "Router",
+        "Router": "Router",
+        "Adsl": "ADSL",
+        "Fibra Óptica": "Fibra óptica",
+        "Datos Móviles": "Datos móviles",
+        "Satelital": "Satelital",
+        "Otro": "Otro"
+    }
+
+    return equivalencias.get(
+        texto,
+        texto
+    )
+
+
+def preparar_cambios_participantes(
+    df_participantes: pd.DataFrame
+) -> pd.DataFrame:
+
+    cambios = []
+
+    for _, fila in df_participantes.iterrows():
+
+        nombre_original = fila.get("nombre_completo")
+        ciudad_original = fila.get("ciudad")
+        genero_original = fila.get("genero")
+        nivel_original = fila.get("nivel_educativo")
+
+        nombre_limpio = normalizar_texto(nombre_original)
+        ciudad_limpia = normalizar_texto(ciudad_original)
+        genero_limpio = normalizar_genero(genero_original)
+        nivel_limpio = normalizar_nivel_educativo(nivel_original)
+
+        datos_actualizados = {}
+
+        if nombre_limpio and nombre_limpio != nombre_original:
+            datos_actualizados["nombre_completo"] = nombre_limpio
+
+        if ciudad_limpia and ciudad_limpia != ciudad_original:
+            datos_actualizados["ciudad"] = ciudad_limpia
+
+        if genero_limpio and genero_limpio != genero_original:
+            datos_actualizados["genero"] = genero_limpio
+
+        if nivel_limpio and nivel_limpio != nivel_original:
+            datos_actualizados["nivel_educativo"] = nivel_limpio
+
+        if datos_actualizados:
+            cambios.append({
+                "id_participante": fila["id_participante"],
+                "Nombre actual": nombre_original,
+                "Nombre limpio": nombre_limpio,
+                "Ciudad actual": ciudad_original,
+                "Ciudad limpia": ciudad_limpia,
+                "Género actual": genero_original,
+                "Género limpio": genero_limpio,
+                "Nivel actual": nivel_original,
+                "Nivel limpio": nivel_limpio,
+                "_datos_actualizados": datos_actualizados
+            })
+
+    return pd.DataFrame(
+        cambios
+    )
+
+
+def preparar_cambios_encuestas(
+    df_respuestas: pd.DataFrame
+) -> pd.DataFrame:
+
+    cambios = []
+
+    for _, fila in df_respuestas.iterrows():
+
+        datos_actualizados = {}
+
+        usa_nube_original = fila.get("usa_nube")
+        reutiliza_original = fila.get("reutiliza_contrasenas")
+        conexion_original = fila.get("tipo_conexion")
+        plataforma_original = fila.get("plataforma_nube")
+        contenido_original = fila.get("contenido_nube")
+
+        usa_nube_limpio = normalizar_si_no(
+            usa_nube_original
+        )
+
+        reutiliza_limpio = normalizar_si_no(
+            reutiliza_original
+        )
+
+        conexion_limpia = normalizar_tipo_conexion(
+            conexion_original
+        )
+
+        if (
+            usa_nube_limpio
+            and usa_nube_limpio != usa_nube_original
+        ):
+            datos_actualizados["usa_nube"] = usa_nube_limpio
+
+        if (
+            reutiliza_limpio
+            and reutiliza_limpio != reutiliza_original
+        ):
+            datos_actualizados["reutiliza_contrasenas"] = reutiliza_limpio
+
+        if (
+            conexion_limpia
+            and conexion_limpia != conexion_original
+        ):
+            datos_actualizados["tipo_conexion"] = conexion_limpia
+
+        if (
+            usa_nube_limpio == "No"
+            and (
+                not plataforma_original
+                or str(plataforma_original).strip() == ""
+            )
+        ):
+            datos_actualizados["plataforma_nube"] = "No aplica"
+
+        if (
+            usa_nube_limpio == "No"
+            and (
+                not contenido_original
+                or str(contenido_original).strip() == ""
+            )
+        ):
+            datos_actualizados["contenido_nube"] = "No aplica"
+
+        if datos_actualizados:
+            cambios.append({
+                "id_respuesta": fila["id_respuesta"],
+                "Usa nube actual": usa_nube_original,
+                "Usa nube limpio": datos_actualizados.get(
+                    "usa_nube",
+                    usa_nube_original
+                ),
+                "Reutiliza actual": reutiliza_original,
+                "Reutiliza limpio": datos_actualizados.get(
+                    "reutiliza_contrasenas",
+                    reutiliza_original
+                ),
+                "Conexión actual": conexion_original,
+                "Conexión limpia": datos_actualizados.get(
+                    "tipo_conexion",
+                    conexion_original
+                ),
+                "Plataforma actual": plataforma_original,
+                "Plataforma limpia": datos_actualizados.get(
+                    "plataforma_nube",
+                    plataforma_original
+                ),
+                "Contenido actual": contenido_original,
+                "Contenido limpio": datos_actualizados.get(
+                    "contenido_nube",
+                    contenido_original
+                ),
+                "_datos_actualizados": datos_actualizados
+            })
+
+    return pd.DataFrame(
+        cambios
+    )
+
+
+def aplicar_cambios_participantes(
+    df_cambios: pd.DataFrame
+) -> int:
+
+    total_actualizados = 0
+
+    for _, fila in df_cambios.iterrows():
+
+        datos_actualizados = fila["_datos_actualizados"]
+
+        if datos_actualizados:
+            (
+                supabase
+                .table("participantes")
+                .update(datos_actualizados)
+                .eq(
+                    "id_participante",
+                    fila["id_participante"]
+                )
+                .execute()
+            )
+
+            total_actualizados += 1
+
+    return total_actualizados
+
+
+def aplicar_cambios_encuestas(
+    df_cambios: pd.DataFrame
+) -> int:
+
+    total_actualizados = 0
+
+    for _, fila in df_cambios.iterrows():
+
+        datos_actualizados = fila["_datos_actualizados"]
+
+        if datos_actualizados:
+            (
+                supabase
+                .table(
+                    "respuestas_encuesta_ciberseguridad"
+                )
+                .update(datos_actualizados)
+                .eq(
+                    "id_respuesta",
+                    fila["id_respuesta"]
+                )
+                .execute()
+            )
+
+            total_actualizados += 1
+
+    return total_actualizados
+
+
+# =========================
+# CARGAR DATOS
+# =========================
+
+try:
+    participantes = consultar_tabla(
+        "participantes",
+        (
+            "id_participante, id_usuario, nombre_completo, "
+            "edad, genero, ciudad, nivel_educativo, fecha_registro"
+        )
+    )
+
+    perfiles = consultar_tabla(
+        "perfiles",
+        "id, rol"
+    )
+
+    respuestas_ciberseguridad = consultar_tabla(
+        "respuestas_encuesta_ciberseguridad",
+        (
+            "id_respuesta, id_usuario, fecha_respuesta, usa_nube, "
+            "plataforma_nube, contenido_nube, nivel_conocimiento, "
+            "manejo_ciberseguridad, frecuencia_info_seguridad, "
+            "reconoce_phishing, identifica_herramientas_seguridad, "
+            "estado_antivirus, tipo_conexion, estabilidad_conexion, "
+            "frecuencia_fallas_internet, cambio_contrasenas_anual, "
+            "reutiliza_contrasenas, importancia_actualizar_contrasenas, "
+            "puntaje_riesgo, clasificacion_riesgo, observacion"
+        )
+    )
+
+except Exception as error:
+    st.error("No se pudieron cargar los datos.")
+    st.write(error)
+    st.stop()
+
+
+# =========================
+# PREPARAR DATAFRAMES
+# =========================
+
+df_participantes = pd.DataFrame(
+    participantes
+)
+
+df_perfiles = pd.DataFrame(
+    perfiles
+)
+
+df_respuestas = pd.DataFrame(
+    respuestas_ciberseguridad
+)
+
+if not df_participantes.empty and not df_perfiles.empty:
+
+    df_participantes = df_participantes.merge(
+        df_perfiles,
+        left_on="id_usuario",
+        right_on="id",
+        how="left"
+    )
+
+    df_participantes = df_participantes[
+        df_participantes["rol"] == "usuario"
+    ].copy()
+
+
+if not df_respuestas.empty:
+    df_respuestas["fecha_respuesta"] = pd.to_datetime(
+        df_respuestas["fecha_respuesta"],
+        errors="coerce"
+    )
+
+    df_respuestas["puntaje_riesgo"] = pd.to_numeric(
+        df_respuestas["puntaje_riesgo"],
+        errors="coerce"
+    )
+
+
+# =========================
+# ANÁLISIS DE CALIDAD
+# =========================
+
+df_cambios_participantes = (
+    preparar_cambios_participantes(
+        df_participantes
+    )
+    if not df_participantes.empty
+    else pd.DataFrame()
+)
+
+df_cambios_encuestas = (
+    preparar_cambios_encuestas(
+        df_respuestas
+    )
+    if not df_respuestas.empty
+    else pd.DataFrame()
+)
+
+duplicados = pd.DataFrame()
+
+if not df_participantes.empty:
+    duplicados = df_participantes[
+        df_participantes.duplicated(
+            subset=[
+                "nombre_completo",
+                "edad",
+                "ciudad"
+            ],
+            keep=False
+        )
+    ].copy()
+
+
+encuestas_incompletas = pd.DataFrame()
+
+if not df_respuestas.empty:
+
+    columnas_obligatorias = [
+        "id_usuario",
+        "usa_nube",
+        "nivel_conocimiento",
+        "manejo_ciberseguridad",
+        "reconoce_phishing",
+        "estado_antivirus",
+        "tipo_conexion",
+        "reutiliza_contrasenas",
+        "puntaje_riesgo",
+        "clasificacion_riesgo"
+    ]
+
+    columnas_existentes = [
+        columna
+        for columna in columnas_obligatorias
+        if columna in df_respuestas.columns
+    ]
+
+    encuestas_incompletas = df_respuestas[
+        df_respuestas[columnas_existentes]
+        .isna()
+        .any(axis=1)
+    ].copy()
+
+
+usuarios_sin_encuesta = pd.DataFrame()
+
+if not df_participantes.empty:
+
+    usuarios_con_encuesta = (
+        df_respuestas["id_usuario"]
+        .dropna()
+        .unique()
+        .tolist()
+        if not df_respuestas.empty
+        else []
+    )
+
+    usuarios_sin_encuesta = df_participantes[
+        ~df_participantes["id_usuario"]
+        .isin(usuarios_con_encuesta)
+    ].copy()
 
 
 # =========================
@@ -417,10 +678,10 @@ elif menu == "⚙️ Administración":
 st.markdown(
     """
 <div class="page-heading">
-<h1>Limpieza de datos</h1>
+<h1>Limpieza y calidad de datos</h1>
 <p>
-Detecta problemas de calidad, revisa una vista previa
-y aplica correcciones seguras antes del análisis.
+Revisa la calidad de la información registrada, detecta posibles
+errores y aplica normalizaciones seguras sin eliminar datos.
 </p>
 </div>
 """,
@@ -429,209 +690,160 @@ y aplica correcciones seguras antes del análisis.
 
 
 # =========================
-# VALIDAR DATOS DISPONIBLES
-# =========================
-
-if df_participantes.empty:
-    st.info("Todavía no existen participantes para analizar.")
-    st.stop()
-
-
-# =========================
-# DETECTAR PROBLEMAS
-# =========================
-
-columnas_obligatorias = [
-    "nombre_completo",
-    "edad",
-    "genero",
-    "ciudad",
-    "nivel_educativo"
-]
-
-campos_vacios = (
-    df_participantes[columnas_obligatorias]
-    .isna()
-    .sum()
-    .sum()
-)
-
-for columna in columnas_obligatorias:
-    if df_participantes[columna].dtype == "object":
-        campos_vacios += (
-            df_participantes[columna]
-            .fillna("")
-            .astype(str)
-            .str.strip()
-            .eq("")
-            .sum()
-        )
-
-edades_invalidas = df_participantes[
-    (df_participantes["edad"] < 10)
-    | (df_participantes["edad"] > 100)
-]
-
-df_participantes["_nombre_normalizado"] = (
-    df_participantes["nombre_completo"]
-    .fillna("")
-    .apply(normalizar_texto)
-)
-
-df_participantes["_ciudad_normalizada"] = (
-    df_participantes["ciudad"]
-    .fillna("")
-    .apply(normalizar_texto)
-)
-
-duplicados = df_participantes[
-    df_participantes.duplicated(
-        subset=[
-            "_nombre_normalizado",
-            "edad",
-            "_ciudad_normalizada"
-        ],
-        keep=False
-    )
-].copy()
-
-df_encuestas = pd.DataFrame(encuestas)
-df_respuestas = pd.DataFrame(respuestas)
-df_resultados = pd.DataFrame(resultados)
-
-encuestas_incompletas = pd.DataFrame()
-
-if not df_encuestas.empty:
-
-    ids_con_respuestas = set()
-
-    if not df_respuestas.empty:
-        ids_con_respuestas = set(
-            df_respuestas["id_encuesta"].dropna()
-        )
-
-    ids_con_resultado = set()
-
-    if not df_resultados.empty:
-        ids_con_resultado = set(
-            df_resultados["id_encuesta"].dropna()
-        )
-
-    encuestas_incompletas = df_encuestas[
-        ~df_encuestas["id_encuesta"].isin(ids_con_respuestas)
-        | ~df_encuestas["id_encuesta"].isin(ids_con_resultado)
-    ].copy()
-
-df_cambios = preparar_cambios(df_participantes)
-
-
-# =========================
 # MÉTRICAS
 # =========================
+
+total_participantes = len(
+    df_participantes
+)
+
+total_encuestas = len(
+    df_respuestas
+)
+
+total_cambios_participantes = len(
+    df_cambios_participantes
+)
+
+total_cambios_encuestas = len(
+    df_cambios_encuestas
+)
+
+total_duplicados = len(
+    duplicados
+)
+
+total_incompletas = len(
+    encuestas_incompletas
+)
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.metric(
-        "Participantes analizados",
-        len(df_participantes)
+        "Participantes",
+        total_participantes
     )
 
 with col2:
     st.metric(
-        "Campos vacíos",
-        int(campos_vacios)
+        "Encuestas",
+        total_encuestas
     )
 
 with col3:
     st.metric(
-        "Posibles duplicados",
-        len(duplicados)
+        "Correcciones",
+        total_cambios_participantes + total_cambios_encuestas
     )
 
 with col4:
     st.metric(
-        "Encuestas incompletas",
-        len(encuestas_incompletas)
+        "Duplicados",
+        total_duplicados
     )
 
 with col5:
     st.metric(
-        "Filas por normalizar",
-        len(df_cambios)
+        "Incompletas",
+        total_incompletas
     )
-
-
-st.write("")
 
 
 # =========================
 # PESTAÑAS
 # =========================
 
-tab_resumen, tab_correcciones, tab_duplicados, tab_encuestas = st.tabs(
+tab_resumen, tab_participantes, tab_encuestas, tab_duplicados, tab_sin_encuesta = st.tabs(
     [
         "📊 Resumen",
-        "🧹 Vista previa de limpieza",
-        "🔎 Posibles duplicados",
-        "📝 Encuestas incompletas"
+        "👥 Limpieza participantes",
+        "📝 Limpieza encuestas",
+        "🔎 Duplicados",
+        "⚠️ Usuarios sin encuesta"
     ]
 )
 
 
 # =========================
-# TAB: RESUMEN
+# TAB RESUMEN
 # =========================
 
 with tab_resumen:
 
-    st.markdown("### Calidad general de los datos")
+    st.markdown("### Calidad general de datos")
 
     st.write(
-        "La limpieza automática solamente normaliza textos. "
-        "No elimina participantes ni modifica respuestas de encuestas."
+        "Este módulo analiza los datos registrados en CyberLey. "
+        "La limpieza automática aplica normalizaciones seguras, "
+        "como corrección de espacios, formato de texto y valores "
+        "como 'Wifi' → 'Wi-Fi' o 'Rauter' → 'Router'."
     )
 
-    columnas_mostrar = [
-        "nombre_completo",
-        "edad",
-        "genero",
-        "ciudad",
-        "nivel_educativo",
-        "fecha_registro"
-    ]
+    resumen_calidad = pd.DataFrame({
+        "Indicador": [
+            "Participantes registrados",
+            "Encuestas de ciberseguridad",
+            "Participantes con correcciones sugeridas",
+            "Encuestas con correcciones sugeridas",
+            "Posibles duplicados",
+            "Encuestas incompletas",
+            "Usuarios sin encuesta"
+        ],
+        "Cantidad": [
+            total_participantes,
+            total_encuestas,
+            total_cambios_participantes,
+            total_cambios_encuestas,
+            total_duplicados,
+            total_incompletas,
+            len(usuarios_sin_encuesta)
+        ]
+    })
 
     st.dataframe(
-        df_participantes[columnas_mostrar],
+        resumen_calidad,
         use_container_width=True,
-        hide_index=True,
-        column_config={
-            "nombre_completo": "Nombre completo",
-            "edad": "Edad",
-            "genero": "Género",
-            "ciudad": "Ciudad",
-            "nivel_educativo": "Nivel educativo",
-            "fecha_registro": "Fecha de registro"
-        }
+        hide_index=True
     )
 
+    if not df_respuestas.empty:
+        st.markdown("### Valores faltantes por columna de encuesta")
+
+        nulos = (
+            df_respuestas
+            .isna()
+            .sum()
+            .reset_index()
+        )
+
+        nulos.columns = [
+            "Columna",
+            "Valores faltantes"
+        ]
+
+        st.dataframe(
+            nulos,
+            use_container_width=True,
+            hide_index=True
+        )
+
 
 # =========================
-# TAB: VISTA PREVIA
+# TAB PARTICIPANTES
 # =========================
 
-with tab_correcciones:
+with tab_participantes:
 
-    st.markdown("### Correcciones seguras disponibles")
+    st.markdown("### Correcciones seguras en participantes")
 
-    if df_cambios.empty:
+    if df_cambios_participantes.empty:
         st.success(
-            "✅ Los textos ya tienen un formato uniforme. "
-            "No hay cambios pendientes."
+            "✅ Los datos de participantes ya tienen formato uniforme."
         )
 
     else:
-        columnas_vista_previa = [
+        columnas_vista = [
             "Nombre actual",
             "Nombre limpio",
             "Ciudad actual",
@@ -643,7 +855,7 @@ with tab_correcciones:
         ]
 
         st.dataframe(
-            df_cambios[columnas_vista_previa],
+            df_cambios_participantes[columnas_vista],
             use_container_width=True,
             hide_index=True
         )
@@ -653,17 +865,17 @@ with tab_correcciones:
         )
 
         confirmar = st.checkbox(
-            "Confirmo que revisé las correcciones."
+            "Confirmo que revisé las correcciones de participantes."
         )
 
         if st.button(
-            "Aplicar limpieza segura",
+            "Aplicar limpieza de participantes",
             use_container_width=True,
             disabled=not confirmar
         ):
             try:
-                total_actualizados = aplicar_cambios(
-                    df_cambios
+                total_actualizados = aplicar_cambios_participantes(
+                    df_cambios_participantes
                 )
 
                 guardar_notificacion(
@@ -681,7 +893,107 @@ with tab_correcciones:
 
 
 # =========================
-# TAB: DUPLICADOS
+# TAB ENCUESTAS
+# =========================
+
+with tab_encuestas:
+
+    st.markdown("### Correcciones seguras en encuestas")
+
+    if df_cambios_encuestas.empty:
+        st.success(
+            "✅ Las respuestas de encuestas ya tienen formato uniforme."
+        )
+
+    else:
+        columnas_vista = [
+            "Usa nube actual",
+            "Usa nube limpio",
+            "Reutiliza actual",
+            "Reutiliza limpio",
+            "Conexión actual",
+            "Conexión limpia",
+            "Plataforma actual",
+            "Plataforma limpia",
+            "Contenido actual",
+            "Contenido limpio"
+        ]
+
+        st.dataframe(
+            df_cambios_encuestas[columnas_vista],
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.warning(
+            "Estas correcciones no recalculan el puntaje, solo normalizan valores de texto."
+        )
+
+        confirmar_encuestas = st.checkbox(
+            "Confirmo que revisé las correcciones de encuestas."
+        )
+
+        if st.button(
+            "Aplicar limpieza de encuestas",
+            use_container_width=True,
+            disabled=not confirmar_encuestas
+        ):
+            try:
+                total_actualizados = aplicar_cambios_encuestas(
+                    df_cambios_encuestas
+                )
+
+                guardar_notificacion(
+                    f"Se actualizaron {total_actualizados} respuestas correctamente.",
+                    "✅"
+                )
+
+                st.rerun()
+
+            except Exception as error:
+                st.error(
+                    "No se pudieron aplicar las correcciones de encuestas."
+                )
+                st.write(error)
+
+    st.markdown("### Encuestas incompletas")
+
+    if encuestas_incompletas.empty:
+        st.success(
+            "✅ Todas las encuestas tienen los datos principales completos."
+        )
+
+    else:
+        st.warning(
+            "Estas encuestas tienen campos principales vacíos."
+        )
+
+        columnas_incompletas = [
+            "fecha_respuesta",
+            "id_usuario",
+            "usa_nube",
+            "nivel_conocimiento",
+            "reconoce_phishing",
+            "estado_antivirus",
+            "puntaje_riesgo",
+            "clasificacion_riesgo"
+        ]
+
+        columnas_existentes = [
+            columna
+            for columna in columnas_incompletas
+            if columna in encuestas_incompletas.columns
+        ]
+
+        st.dataframe(
+            encuestas_incompletas[columnas_existentes],
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+# =========================
+# TAB DUPLICADOS
 # =========================
 
 with tab_duplicados:
@@ -690,7 +1002,7 @@ with tab_duplicados:
 
     if duplicados.empty:
         st.success(
-            "✅ No se detectaron posibles duplicados."
+            "✅ No se detectaron posibles participantes duplicados."
         )
 
     else:
@@ -699,42 +1011,63 @@ with tab_duplicados:
             "No se eliminarán automáticamente."
         )
 
+        columnas_duplicados = [
+            "nombre_completo",
+            "edad",
+            "genero",
+            "ciudad",
+            "nivel_educativo",
+            "fecha_registro"
+        ]
+
+        columnas_existentes = [
+            columna
+            for columna in columnas_duplicados
+            if columna in duplicados.columns
+        ]
+
         st.dataframe(
-            duplicados[
-                [
-                    "nombre_completo",
-                    "edad",
-                    "ciudad",
-                    "nivel_educativo",
-                    "fecha_registro"
-                ]
-            ],
+            duplicados[columnas_existentes],
             use_container_width=True,
             hide_index=True
         )
 
 
 # =========================
-# TAB: ENCUESTAS INCOMPLETAS
+# TAB USUARIOS SIN ENCUESTA
 # =========================
 
-with tab_encuestas:
+with tab_sin_encuesta:
 
-    st.markdown("### Encuestas incompletas")
+    st.markdown("### Usuarios registrados sin encuesta")
 
-    if encuestas_incompletas.empty:
+    if usuarios_sin_encuesta.empty:
         st.success(
-            "✅ Todas las encuestas tienen respuestas y resultado."
+            "✅ Todos los usuarios registrados ya completaron al menos una encuesta."
         )
 
     else:
         st.warning(
-            "Estas encuestas no tienen respuestas o todavía "
-            "no poseen un resultado calculado."
+            "Estos usuarios están registrados, pero aún no han completado la encuesta nueva."
         )
 
+        columnas_sin_encuesta = [
+            "nombre_completo",
+            "edad",
+            "genero",
+            "ciudad",
+            "nivel_educativo",
+            "fecha_registro"
+        ]
+
+        columnas_existentes = [
+            columna
+            for columna in columnas_sin_encuesta
+            if columna in usuarios_sin_encuesta.columns
+        ]
+
         st.dataframe(
-            encuestas_incompletas,
+            usuarios_sin_encuesta[columnas_existentes],
             use_container_width=True,
             hide_index=True
         )

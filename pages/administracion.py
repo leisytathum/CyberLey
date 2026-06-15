@@ -41,17 +41,12 @@ supabase: Client = create_client(
 # RESTAURAR SESIÓN
 # =========================
 
-def restaurar_sesion():
-    """
-    Restaura la sesión del administrador.
-    Realiza un segundo intento si Supabase tarda en responder.
-    """
+access_token = st.session_state.get("access_token")
+refresh_token = st.session_state.get("refresh_token")
 
-    access_token = st.session_state.get("access_token")
-    refresh_token = st.session_state.get("refresh_token")
+if access_token and refresh_token:
 
-    if not access_token or not refresh_token:
-        return
+    sesion_restaurada = False
 
     for intento in range(2):
         try:
@@ -60,28 +55,27 @@ def restaurar_sesion():
                 refresh_token
             )
 
-            return
+            sesion_restaurada = True
+            break
 
         except (TimeoutException, ConnectError):
             if intento == 0:
                 time.sleep(1)
 
-    st.error(
-        "No se pudo conectar con Supabase en este momento. "
-        "Revisa tu conexión e intenta nuevamente."
-    )
+    if not sesion_restaurada:
+        st.error(
+            "No se pudo conectar con Supabase en este momento. "
+            "Revisa tu conexión e intenta nuevamente."
+        )
 
-    if st.button("Reintentar conexión"):
-        st.rerun()
+        if st.button("Reintentar conexión"):
+            st.rerun()
 
-    st.stop()
-
-
-restaurar_sesion()
+        st.stop()
 
 
 # =========================
-# VALIDAR ACCESO ADMIN
+# VALIDAR ADMIN
 # =========================
 
 if "usuario" not in st.session_state:
@@ -100,7 +94,11 @@ if st.session_state.get("rol") != "admin":
 def cargar_css():
     ruta_css = ROOT_DIR / "css" / "dashboard.css"
 
-    with open(ruta_css, "r", encoding="utf-8") as archivo:
+    with open(
+        ruta_css,
+        "r",
+        encoding="utf-8"
+    ) as archivo:
         st.markdown(
             f"<style>{archivo.read()}</style>",
             unsafe_allow_html=True
@@ -111,7 +109,7 @@ cargar_css()
 
 
 # =========================
-# FUNCIONES GENERALES
+# FUNCIONES
 # =========================
 
 def consultar_tabla(
@@ -133,11 +131,6 @@ def guardar_toast(
     mensaje: str,
     icono: str = "✅"
 ):
-    """
-    Guarda una notificación temporal para mostrarla
-    después de recargar la pantalla.
-    """
-
     st.session_state["toast_mensaje"] = mensaje
     st.session_state["toast_icono"] = icono
 
@@ -156,15 +149,135 @@ def mostrar_toast_pendiente():
     if mensaje:
         st.toast(
             mensaje,
-            icon=icono
+            icon=icono,
+            duration=4
         )
+
+
+def preparar_usuarios(
+    perfiles: list[dict],
+    participantes: list[dict],
+    respuestas: list[dict]
+) -> pd.DataFrame:
+
+    df_perfiles = pd.DataFrame(
+        perfiles
+    )
+
+    df_participantes = pd.DataFrame(
+        participantes
+    )
+
+    df_respuestas = pd.DataFrame(
+        respuestas
+    )
+
+    if df_perfiles.empty:
+        return pd.DataFrame()
+
+    if not df_participantes.empty:
+        df_perfiles = df_perfiles.merge(
+            df_participantes,
+            left_on="id",
+            right_on="id_usuario",
+            how="left"
+        )
+
+    else:
+        df_perfiles["ciudad"] = "Sin registrar"
+        df_perfiles["nivel_educativo"] = "Sin registrar"
+        df_perfiles["edad"] = None
+        df_perfiles["genero"] = "Sin registrar"
+
+    if not df_respuestas.empty:
+
+        df_respuestas["fecha_respuesta"] = pd.to_datetime(
+            df_respuestas["fecha_respuesta"],
+            errors="coerce"
+        )
+
+        conteo_encuestas = (
+            df_respuestas
+            .groupby("id_usuario")
+            .size()
+            .reset_index(name="encuestas_realizadas")
+        )
+
+        ultima_encuesta = (
+            df_respuestas
+            .sort_values("fecha_respuesta")
+            .drop_duplicates(
+                subset=["id_usuario"],
+                keep="last"
+            )
+            [
+                [
+                    "id_usuario",
+                    "fecha_respuesta",
+                    "puntaje_riesgo",
+                    "clasificacion_riesgo"
+                ]
+            ]
+            .rename(
+                columns={
+                    "fecha_respuesta": "ultima_evaluacion"
+                }
+            )
+        )
+
+        df_perfiles = df_perfiles.merge(
+            conteo_encuestas,
+            left_on="id",
+            right_on="id_usuario",
+            how="left",
+            suffixes=("", "_encuesta")
+        )
+
+        df_perfiles = df_perfiles.merge(
+            ultima_encuesta,
+            left_on="id",
+            right_on="id_usuario",
+            how="left",
+            suffixes=("", "_ultima")
+        )
+
+    else:
+        df_perfiles["encuestas_realizadas"] = 0
+        df_perfiles["ultima_evaluacion"] = None
+        df_perfiles["puntaje_riesgo"] = None
+        df_perfiles["clasificacion_riesgo"] = "Sin evaluar"
+
+    df_perfiles["encuestas_realizadas"] = (
+        df_perfiles["encuestas_realizadas"]
+        .fillna(0)
+        .astype(int)
+    )
+
+    df_perfiles["clasificacion_riesgo"] = (
+        df_perfiles["clasificacion_riesgo"]
+        .fillna("Sin evaluar")
+        .str.title()
+    )
+
+    for columna in [
+        "ciudad",
+        "nivel_educativo",
+        "genero"
+    ]:
+        if columna in df_perfiles.columns:
+            df_perfiles[columna] = (
+                df_perfiles[columna]
+                .fillna("Sin registrar")
+            )
+
+    return df_perfiles
 
 
 mostrar_toast_pendiente()
 
 
 # =========================
-# CONSULTAR DATOS
+# CARGAR DATOS
 # =========================
 
 try:
@@ -176,19 +289,26 @@ try:
         )
     )
 
-    guias = consultar_tabla(
-        "guias_ciberseguridad",
+    participantes = consultar_tabla(
+        "participantes",
         (
-            "id_guia, titulo, categoria, descripcion, "
-            "contenido, nivel_recomendado, fecha_creacion"
+            "id_participante, id_usuario, edad, genero, "
+            "ciudad, nivel_educativo, fecha_registro"
         )
     )
 
-    notificaciones = consultar_tabla(
-        "notificaciones",
+    respuestas_ciberseguridad = consultar_tabla(
+        "respuestas_encuesta_ciberseguridad",
         (
-            "id_notificacion, id_usuario, titulo, "
-            "mensaje, leida, fecha_creacion"
+            "id_respuesta, id_usuario, fecha_respuesta, "
+            "puntaje_riesgo, clasificacion_riesgo"
+        )
+    )
+
+    reportes = consultar_tabla(
+        "reportes",
+        (
+            "tipo_reporte, descripcion, fecha_generacion"
         )
     )
 
@@ -200,13 +320,15 @@ except Exception as error:
     st.stop()
 
 
-# =========================
-# PREPARAR DATAFRAMES
-# =========================
+df_usuarios = preparar_usuarios(
+    perfiles,
+    participantes,
+    respuestas_ciberseguridad
+)
 
-df_perfiles = pd.DataFrame(perfiles)
-df_guias = pd.DataFrame(guias)
-df_notificaciones = pd.DataFrame(notificaciones)
+df_reportes = pd.DataFrame(
+    reportes
+)
 
 
 # =========================
@@ -233,11 +355,12 @@ with st.sidebar:
             "📝 Encuestas",
             "⚠️ Riesgo",
             "🧹 Limpieza de datos",
+            "📥 Importar datos históricos",
             "💾 Respaldo y recuperación",
             "📄 Reportes",
             "⚙️ Administración"
         ],
-        index=7,
+        index=8,
         label_visibility="collapsed"
     )
 
@@ -270,6 +393,9 @@ elif menu == "⚠️ Riesgo":
 elif menu == "🧹 Limpieza de datos":
     st.switch_page("pages/limpieza.py")
 
+elif menu == "📥 Importar datos históricos":
+    st.switch_page("pages/importar_datos.py")
+
 elif menu == "💾 Respaldo y recuperación":
     st.switch_page("pages/respaldo.py")
 
@@ -284,10 +410,10 @@ elif menu == "📄 Reportes":
 st.markdown(
     """
 <div class="page-heading">
-<h1>Administración</h1>
+<h1>Administración del sistema</h1>
 <p>
-Gestiona usuarios, roles, guías educativas
-y notificaciones internas del sistema.
+Gestiona usuarios, revisa roles, monitorea actividad y valida
+el estado general de los datos principales de CyberLey.
 </p>
 </div>
 """,
@@ -296,157 +422,214 @@ y notificaciones internas del sistema.
 
 
 # =========================
-# MÉTRICAS GENERALES
+# MÉTRICAS
 # =========================
 
-total_perfiles = len(df_perfiles)
+if df_usuarios.empty:
+    total_usuarios = 0
+    total_admins = 0
+    total_participantes = 0
+else:
+    total_usuarios = len(df_usuarios)
 
-total_usuarios = (
-    len(
-        df_perfiles[
-            df_perfiles["rol"] == "usuario"
+    total_admins = len(
+        df_usuarios[
+            df_usuarios["rol"] == "admin"
         ]
     )
-    if not df_perfiles.empty
-    else 0
-)
 
-total_admins = (
-    len(
-        df_perfiles[
-            df_perfiles["rol"] == "admin"
+    total_participantes = len(
+        df_usuarios[
+            df_usuarios["rol"] == "usuario"
         ]
     )
-    if not df_perfiles.empty
-    else 0
+
+total_encuestas = len(
+    respuestas_ciberseguridad
 )
 
-total_guias = len(df_guias)
-total_notificaciones = len(df_notificaciones)
+total_reportes = len(
+    reportes
+)
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.metric(
-        "Perfiles",
-        total_perfiles
-    )
-
-with col2:
-    st.metric(
-        "Usuarios",
+        "Usuarios totales",
         total_usuarios
     )
 
-with col3:
+with col2:
     st.metric(
         "Administradores",
         total_admins
     )
 
+with col3:
+    st.metric(
+        "Participantes",
+        total_participantes
+    )
+
 with col4:
     st.metric(
-        "Guías",
-        total_guias
+        "Encuestas",
+        total_encuestas
     )
 
 with col5:
     st.metric(
-        "Notificaciones",
-        total_notificaciones
+        "Reportes",
+        total_reportes
     )
-
-
-st.write("")
 
 
 # =========================
 # PESTAÑAS
 # =========================
 
-tab_usuarios, tab_guias, tab_notificaciones = st.tabs(
+tab_usuarios, tab_roles, tab_actividad, tab_sistema = st.tabs(
     [
-        "👥 Usuarios y roles",
-        "📚 Guías de ciberseguridad",
-        "🔔 Notificaciones"
+        "👥 Usuarios",
+        "🔐 Roles",
+        "📌 Actividad",
+        "🧩 Estado del sistema"
     ]
 )
 
 
 # =========================
-# TAB: USUARIOS Y ROLES
+# TAB USUARIOS
 # =========================
 
 with tab_usuarios:
 
     st.markdown("### Usuarios registrados")
 
-    st.write(
-        "Consulta los perfiles existentes y cambia el rol "
-        "únicamente cuando sea necesario."
-    )
-
-    if df_perfiles.empty:
-        st.info("Todavía no existen perfiles registrados.")
+    if df_usuarios.empty:
+        st.info(
+            "Todavía no existen usuarios registrados."
+        )
 
     else:
-        tabla_perfiles = df_perfiles[
+        filtro_rol = st.selectbox(
+            "Filtrar por rol",
             [
-                "nombre_completo",
-                "rol",
-                "fecha_creacion"
+                "Todos",
+                "admin",
+                "usuario"
             ]
+        )
+
+        df_tabla = df_usuarios.copy()
+
+        if filtro_rol != "Todos":
+            df_tabla = df_tabla[
+                df_tabla["rol"] == filtro_rol
+            ]
+
+        columnas_tabla = [
+            "nombre_completo",
+            "rol",
+            "ciudad",
+            "nivel_educativo",
+            "encuestas_realizadas",
+            "puntaje_riesgo",
+            "clasificacion_riesgo",
+            "fecha_creacion"
+        ]
+
+        columnas_existentes = [
+            columna
+            for columna in columnas_tabla
+            if columna in df_tabla.columns
+        ]
+
+        df_tabla = df_tabla[
+            columnas_existentes
         ].copy()
 
-        tabla_perfiles["rol"] = (
-            tabla_perfiles["rol"]
-            .str.title()
-        )
-
-        tabla_perfiles["fecha_creacion"] = (
-            pd.to_datetime(
-                tabla_perfiles["fecha_creacion"],
-                errors="coerce"
-            )
-            .dt.strftime(
-                "%d/%m/%Y %H:%M"
-            )
-        )
-
-        st.dataframe(
-            tabla_perfiles,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
+        df_tabla = df_tabla.rename(
+            columns={
                 "nombre_completo": "Nombre completo",
                 "rol": "Rol",
+                "ciudad": "Ciudad",
+                "nivel_educativo": "Nivel educativo",
+                "encuestas_realizadas": "Encuestas",
+                "puntaje_riesgo": "Puntaje",
+                "clasificacion_riesgo": "Riesgo",
                 "fecha_creacion": "Fecha de creación"
             }
         )
 
-        st.markdown("### Cambiar rol")
-
-        opciones_perfiles = {
-            (
-                f"{fila['nombre_completo']} — "
-                f"{fila['rol'].title()}"
-            ): fila["id"]
-
-            for _, fila in df_perfiles.iterrows()
-        }
-
-        perfil_seleccionado_texto = st.selectbox(
-            "Selecciona un perfil",
-            opciones_perfiles.keys()
+        st.dataframe(
+            df_tabla,
+            use_container_width=True,
+            hide_index=True
         )
 
-        perfil_id = opciones_perfiles[
-            perfil_seleccionado_texto
+
+# =========================
+# TAB ROLES
+# =========================
+
+with tab_roles:
+
+    st.markdown("### Gestión de roles")
+
+    st.info(
+        "Desde aquí puedes cambiar el rol de un usuario entre "
+        "'usuario' y 'admin'. Usa esta opción con cuidado."
+    )
+
+    if df_usuarios.empty:
+        st.info(
+            "No hay usuarios disponibles para administrar."
+        )
+
+    else:
+        opciones = {}
+
+        for _, fila in df_usuarios.iterrows():
+
+            nombre = fila.get(
+                "nombre_completo",
+                "Sin nombre"
+            )
+
+            rol = fila.get(
+                "rol",
+                "sin rol"
+            )
+
+            user_id = fila.get(
+                "id"
+            )
+
+            etiqueta = (
+                f"{nombre} — Rol actual: {rol} — {str(user_id)[:8]}"
+            )
+
+            opciones[etiqueta] = user_id
+
+        usuario_seleccionado = st.selectbox(
+            "Selecciona un usuario",
+            opciones.keys()
+        )
+
+        usuario_id = opciones[
+            usuario_seleccionado
         ]
 
-        perfil_actual = df_perfiles[
-            df_perfiles["id"] == perfil_id
+        usuario_actual = df_usuarios[
+            df_usuarios["id"] == usuario_id
         ].iloc[0]
+
+        rol_actual = usuario_actual.get(
+            "rol",
+            "usuario"
+        )
 
         nuevo_rol = st.selectbox(
             "Nuevo rol",
@@ -456,462 +639,219 @@ with tab_usuarios:
             ],
             index=(
                 1
-                if perfil_actual["rol"] == "admin"
+                if rol_actual == "admin"
                 else 0
             )
         )
 
-        if perfil_id == st.session_state.get("usuario_id"):
-            st.info(
-                "Tu propio rol no puede modificarse desde esta pantalla "
-                "para evitar bloquear el acceso administrativo."
-            )
+        confirmar = st.checkbox(
+            "Confirmo que deseo actualizar el rol de este usuario."
+        )
 
         if st.button(
             "Actualizar rol",
             use_container_width=True,
-            disabled=(
-                perfil_id
-                == st.session_state.get("usuario_id")
-            )
+            disabled=not confirmar
         ):
-            try:
-                (
-                    supabase
-                    .table("perfiles")
-                    .update({
-                        "rol": nuevo_rol
-                    })
-                    .eq(
+
+            if usuario_id == st.session_state.get("usuario_id"):
+                st.error(
+                    "No puedes cambiar tu propio rol desde esta pantalla."
+                )
+
+            else:
+                try:
+                    (
+                        supabase
+                        .table("perfiles")
+                        .update(
+                            {
+                                "rol": nuevo_rol
+                            }
+                        )
+                        .eq(
+                            "id",
+                            usuario_id
+                        )
+                        .execute()
+                    )
+
+                    guardar_toast(
+                        "Rol actualizado correctamente.",
+                        "✅"
+                    )
+
+                    st.rerun()
+
+                except Exception as error:
+                    st.error(
+                        "No se pudo actualizar el rol."
+                    )
+                    st.write(error)
+
+
+# =========================
+# TAB ACTIVIDAD
+# =========================
+
+with tab_actividad:
+
+    st.markdown("### Actividad reciente")
+
+    if respuestas_ciberseguridad:
+
+        df_respuestas = pd.DataFrame(
+            respuestas_ciberseguridad
+        )
+
+        df_respuestas["fecha_respuesta"] = pd.to_datetime(
+            df_respuestas["fecha_respuesta"],
+            errors="coerce"
+        )
+
+        df_actividad = df_respuestas.copy()
+
+        if not df_usuarios.empty:
+
+            df_actividad = df_actividad.merge(
+                df_usuarios[
+                    [
                         "id",
-                        perfil_id
-                    )
-                    .execute()
-                )
-
-                guardar_toast(
-                    "Rol actualizado correctamente.",
-                    "✅"
-                )
-
-                st.rerun()
-
-            except Exception as error:
-                st.error(
-                    "No se pudo actualizar el rol."
-                )
-
-                st.write(error)
-
-
-# =========================
-# TAB: GUÍAS
-# =========================
-
-with tab_guias:
-
-    st.markdown("### Crear guía de ciberseguridad")
-
-    with st.form(
-        "formulario_nueva_guia",
-        clear_on_submit=True
-    ):
-
-        titulo_guia = st.text_input(
-            "Título",
-            placeholder="Ejemplo: Protege tus contraseñas"
-        )
-
-        categoria_guia = st.text_input(
-            "Categoría",
-            placeholder="Ejemplo: Contraseñas"
-        )
-
-        descripcion_guia = st.text_area(
-            "Descripción breve",
-            placeholder=(
-                "Explica de forma sencilla el propósito de la guía."
+                        "nombre_completo",
+                        "rol"
+                    ]
+                ],
+                left_on="id_usuario",
+                right_on="id",
+                how="left"
             )
-        )
 
-        contenido_guia = st.text_area(
-            "Contenido",
-            placeholder=(
-                "Escribe recomendaciones claras para los usuarios."
-            ),
-            height=180
-        )
-
-        nivel_guia = st.selectbox(
-            "Nivel recomendado",
-            [
-                "general",
-                "bajo",
-                "medio",
-                "alto"
-            ]
-        )
-
-        crear_guia = st.form_submit_button(
-            "Guardar guía",
-            use_container_width=True
-        )
-
-        if crear_guia:
-
-            if (
-                titulo_guia.strip() == ""
-                or categoria_guia.strip() == ""
-            ):
-                st.warning(
-                    "Completa el título y la categoría."
-                )
-
-            else:
-                try:
-                    (
-                        supabase
-                        .table("guias_ciberseguridad")
-                        .insert({
-                            "titulo": titulo_guia.strip(),
-                            "categoria": categoria_guia.strip(),
-                            "descripcion": (
-                                descripcion_guia.strip()
-                            ),
-                            "contenido": (
-                                contenido_guia.strip()
-                            ),
-                            "nivel_recomendado": nivel_guia
-                        })
-                        .execute()
-                    )
-
-                    guardar_toast(
-                        "Guía creada correctamente.",
-                        "✅"
-                    )
-
-                    st.rerun()
-
-                except Exception as error:
-                    st.error(
-                        "No se pudo crear la guía."
-                    )
-
-                    st.write(error)
-
-    st.divider()
-
-    st.markdown("### Guías registradas")
-
-    if df_guias.empty:
-        st.info(
-            "Todavía no existen guías de ciberseguridad."
-        )
-
-    else:
-        tabla_guias = df_guias[
-            [
-                "titulo",
-                "categoria",
-                "nivel_recomendado",
-                "fecha_creacion"
-            ]
-        ].copy()
-
-        tabla_guias["nivel_recomendado"] = (
-            tabla_guias["nivel_recomendado"]
-            .fillna("general")
-            .str.title()
-        )
-
-        tabla_guias["fecha_creacion"] = (
-            pd.to_datetime(
-                tabla_guias["fecha_creacion"],
-                errors="coerce"
-            )
-            .dt.strftime(
-                "%d/%m/%Y %H:%M"
-            )
-        )
-
-        st.dataframe(
-            tabla_guias,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "titulo": "Título",
-                "categoria": "Categoría",
-                "nivel_recomendado": "Nivel recomendado",
-                "fecha_creacion": "Fecha de creación"
-            }
-        )
-
-        st.markdown("### Editar guía")
-
-        opciones_guias = {
-            fila["titulo"]: fila["id_guia"]
-            for _, fila in df_guias.iterrows()
-        }
-
-        guia_seleccionada_texto = st.selectbox(
-            "Selecciona una guía",
-            opciones_guias.keys()
-        )
-
-        guia_id = opciones_guias[
-            guia_seleccionada_texto
+        columnas_actividad = [
+            "fecha_respuesta",
+            "nombre_completo",
+            "puntaje_riesgo",
+            "clasificacion_riesgo"
         ]
 
-        guia_actual = df_guias[
-            df_guias["id_guia"] == guia_id
-        ].iloc[0]
-
-        nuevo_titulo = st.text_input(
-            "Editar título",
-            value=(
-                guia_actual.get("titulo")
-                or ""
-            )
-        )
-
-        nueva_categoria = st.text_input(
-            "Editar categoría",
-            value=(
-                guia_actual.get("categoria")
-                or ""
-            )
-        )
-
-        nueva_descripcion = st.text_area(
-            "Editar descripción",
-            value=(
-                guia_actual.get("descripcion")
-                or ""
-            )
-        )
-
-        nuevo_contenido = st.text_area(
-            "Editar contenido",
-            value=(
-                guia_actual.get("contenido")
-                or ""
-            ),
-            height=180
-        )
-
-        niveles_disponibles = [
-            "general",
-            "bajo",
-            "medio",
-            "alto"
+        columnas_existentes = [
+            columna
+            for columna in columnas_actividad
+            if columna in df_actividad.columns
         ]
 
-        nivel_actual = (
-            guia_actual.get("nivel_recomendado")
-            or "general"
-        )
-
-        nuevo_nivel = st.selectbox(
-            "Editar nivel recomendado",
-            niveles_disponibles,
-            index=niveles_disponibles.index(
-                nivel_actual
-            )
-        )
-
-        if st.button(
-            "Actualizar guía",
-            use_container_width=True
-        ):
-            try:
-                (
-                    supabase
-                    .table("guias_ciberseguridad")
-                    .update({
-                        "titulo": nuevo_titulo.strip(),
-                        "categoria": nueva_categoria.strip(),
-                        "descripcion": nueva_descripcion.strip(),
-                        "contenido": nuevo_contenido.strip(),
-                        "nivel_recomendado": nuevo_nivel
-                    })
-                    .eq(
-                        "id_guia",
-                        guia_id
-                    )
-                    .execute()
-                )
-
-                guardar_toast(
-                    "Guía actualizada correctamente.",
-                    "✅"
-                )
-
-                st.rerun()
-
-            except Exception as error:
-                st.error(
-                    "No se pudo actualizar la guía."
-                )
-
-                st.write(error)
-
-
-# =========================
-# TAB: NOTIFICACIONES
-# =========================
-
-with tab_notificaciones:
-
-    st.markdown("### Enviar notificación")
-
-    if df_perfiles.empty:
-        st.info(
-            "No existen usuarios para enviar notificaciones."
-        )
-
-    else:
-        opciones_destinatarios = {
-            (
-                f"{fila['nombre_completo']} — "
-                f"{fila['rol'].title()}"
-            ): fila["id"]
-
-            for _, fila in df_perfiles.iterrows()
-        }
-
-        destinatario_texto = st.selectbox(
-            "Destinatario",
-            opciones_destinatarios.keys()
-        )
-
-        destinatario_id = opciones_destinatarios[
-            destinatario_texto
-        ]
-
-        titulo_notificacion = st.text_input(
-            "Título de la notificación",
-            placeholder="Ejemplo: Nueva guía disponible"
-        )
-
-        mensaje_notificacion = st.text_area(
-            "Mensaje",
-            placeholder=(
-                "Escribe un mensaje breve para el usuario."
-            )
-        )
-
-        if st.button(
-            "Enviar notificación",
-            use_container_width=True
-        ):
-
-            if (
-                titulo_notificacion.strip() == ""
-                or mensaje_notificacion.strip() == ""
-            ):
-                st.warning(
-                    "Completa el título y el mensaje."
-                )
-
-            else:
-                try:
-                    (
-                        supabase
-                        .table("notificaciones")
-                        .insert({
-                            "id_usuario": destinatario_id,
-                            "titulo": (
-                                titulo_notificacion.strip()
-                            ),
-                            "mensaje": (
-                                mensaje_notificacion.strip()
-                            ),
-                            "leida": False
-                        })
-                        .execute()
-                    )
-
-                    guardar_toast(
-                        "Notificación enviada correctamente.",
-                        "✅"
-                    )
-
-                    st.rerun()
-
-                except Exception as error:
-                    st.error(
-                        "No se pudo enviar la notificación."
-                    )
-
-                    st.write(error)
-
-    st.divider()
-
-    st.markdown("### Notificaciones recientes")
-
-    if df_notificaciones.empty:
-        st.info(
-            "Todavía no existen notificaciones."
-        )
-
-    else:
-        nombres_perfiles = {
-            fila["id"]: fila["nombre_completo"]
-            for _, fila in df_perfiles.iterrows()
-        }
-
-        tabla_notificaciones = df_notificaciones.copy()
-
-        tabla_notificaciones["destinatario"] = (
-            tabla_notificaciones["id_usuario"]
-            .map(nombres_perfiles)
-            .fillna("Usuario no disponible")
-        )
-
-        tabla_notificaciones["estado"] = (
-            tabla_notificaciones["leida"]
-            .map({
-                True: "Leída",
-                False: "Pendiente"
-            })
-        )
-
-        tabla_notificaciones["fecha_creacion"] = (
-            pd.to_datetime(
-                tabla_notificaciones["fecha_creacion"],
-                errors="coerce"
-            )
-            .dt.strftime(
-                "%d/%m/%Y %H:%M"
-            )
-        )
-
-        tabla_notificaciones = (
-            tabla_notificaciones
+        df_actividad = (
+            df_actividad[columnas_existentes]
             .sort_values(
-                "fecha_creacion",
+                "fecha_respuesta",
                 ascending=False
             )
+            .head(10)
+        )
+
+        df_actividad = df_actividad.rename(
+            columns={
+                "fecha_respuesta": "Fecha",
+                "nombre_completo": "Usuario",
+                "puntaje_riesgo": "Puntaje",
+                "clasificacion_riesgo": "Riesgo"
+            }
         )
 
         st.dataframe(
-            tabla_notificaciones[
-                [
-                    "destinatario",
-                    "titulo",
-                    "mensaje",
-                    "estado",
-                    "fecha_creacion"
-                ]
-            ],
+            df_actividad,
             use_container_width=True,
-            hide_index=True,
-            column_config={
-                "destinatario": "Destinatario",
-                "titulo": "Título",
-                "mensaje": "Mensaje",
-                "estado": "Estado",
-                "fecha_creacion": "Fecha"
+            hide_index=True
+        )
+
+    else:
+        st.info(
+            "Todavía no hay evaluaciones registradas."
+        )
+
+    st.markdown("### Reportes generados")
+
+    if df_reportes.empty:
+        st.info(
+            "Todavía no hay reportes generados."
+        )
+
+    else:
+        df_historial = df_reportes.copy()
+
+        if "fecha_generacion" in df_historial.columns:
+            df_historial["fecha_generacion"] = pd.to_datetime(
+                df_historial["fecha_generacion"],
+                errors="coerce"
+            )
+
+        df_historial = (
+            df_historial
+            .sort_values(
+                "fecha_generacion",
+                ascending=False
+            )
+            .head(10)
+        )
+
+        df_historial = df_historial.rename(
+            columns={
+                "tipo_reporte": "Tipo de reporte",
+                "descripcion": "Descripción",
+                "fecha_generacion": "Fecha"
             }
         )
+
+        st.dataframe(
+            df_historial,
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+# =========================
+# TAB SISTEMA
+# =========================
+
+with tab_sistema:
+
+    st.markdown("### Estado general de datos")
+
+    estado_sistema = pd.DataFrame({
+        "Componente": [
+            "Perfiles",
+            "Participantes",
+            "Encuesta nueva",
+            "Reportes",
+            "Importación CSV histórico",
+            "Limpieza de datos",
+            "Respaldo y recuperación"
+        ],
+        "Estado": [
+            "Activo",
+            "Activo",
+            "Activo",
+            "Activo",
+            "Activo",
+            "Activo",
+            "Activo"
+        ],
+        "Descripción": [
+            "Usuarios del sistema y sus roles.",
+            "Datos personales básicos de los usuarios.",
+            "Respuestas de la encuesta de ciberseguridad.",
+            "Reportes generados por administradores.",
+            "Carga y limpieza de CSV externo.",
+            "Normalización y revisión de calidad.",
+            "Generación y restauración de copias de seguridad."
+        ]
+    })
+
+    st.dataframe(
+        estado_sistema,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    st.success(
+        "✅ El módulo administrativo está conectado a la estructura nueva de CyberLey."
+    )

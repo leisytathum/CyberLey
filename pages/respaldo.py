@@ -96,7 +96,11 @@ if st.session_state.get("rol") != "admin":
 def cargar_css():
     ruta_css = ROOT_DIR / "css" / "dashboard.css"
 
-    with open(ruta_css, "r", encoding="utf-8") as archivo:
+    with open(
+        ruta_css,
+        "r",
+        encoding="utf-8"
+    ) as archivo:
         st.markdown(
             f"<style>{archivo.read()}</style>",
             unsafe_allow_html=True
@@ -107,29 +111,14 @@ cargar_css()
 
 
 # =========================
-# NOTIFICACIONES
-# =========================
-
-def mostrar_toast(
-    mensaje: str,
-    icono: str = "✅"
-):
-    st.toast(
-        mensaje,
-        icon=icono,
-        duration=4
-    )
-
-
-# =========================
 # TABLAS RESPALDADAS
 # =========================
 
 TABLAS_RESPALDO = [
+    "perfiles",
     "participantes",
-    "encuestas",
-    "respuestas_encuesta",
-    "resultados_riesgo"
+    "respuestas_encuesta_ciberseguridad",
+    "reportes"
 ]
 
 
@@ -153,14 +142,19 @@ def consultar_tabla(
 
 def generar_respaldo_binario() -> bytes:
     """
-    Consulta los datos y crea un archivo binario comprimido.
+    Consulta los datos actuales y crea un archivo comprimido.
     """
 
     contenido = {
         "metadata": {
             "sistema": "CyberLey",
-            "version": "1.0",
+            "version": "2.0",
             "fecha_generacion": datetime.now().isoformat(),
+            "descripcion": (
+                "Respaldo de datos principales de CyberLey: "
+                "perfiles, participantes, respuestas de la encuesta "
+                "de ciberseguridad y reportes generados."
+            ),
             "tablas_incluidas": TABLAS_RESPALDO
         },
         "datos": {}
@@ -209,8 +203,15 @@ def leer_respaldo_binario(
             "El contenido del respaldo no tiene el formato esperado."
         )
 
-    metadata = respaldo.get("metadata", {})
-    datos = respaldo.get("datos", {})
+    metadata = respaldo.get(
+        "metadata",
+        {}
+    )
+
+    datos = respaldo.get(
+        "datos",
+        {}
+    )
 
     if metadata.get("sistema") != "CyberLey":
         raise ValueError(
@@ -242,17 +243,20 @@ def restaurar_respaldo(
     datos = respaldo["datos"]
 
     orden_restauracion = [
+        "perfiles",
         "participantes",
-        "encuestas",
-        "respuestas_encuesta",
-        "resultados_riesgo"
+        "respuestas_encuesta_ciberseguridad",
+        "reportes"
     ]
 
     registros_restaurados = {}
 
     for tabla in orden_restauracion:
 
-        filas = datos.get(tabla, [])
+        filas = datos.get(
+            tabla,
+            []
+        )
 
         if filas:
             (
@@ -262,7 +266,9 @@ def restaurar_respaldo(
                 .execute()
             )
 
-        registros_restaurados[tabla] = len(filas)
+        registros_restaurados[tabla] = len(
+            filas
+        )
 
     return registros_restaurados
 
@@ -291,12 +297,12 @@ with st.sidebar:
             "📝 Encuestas",
             "⚠️ Riesgo",
             "🧹 Limpieza de datos",
-            
+            "📥 Importar datos históricos",
             "💾 Respaldo y recuperación",
             "📄 Reportes",
             "⚙️ Administración"
         ],
-        index=5,
+        index=6,
         label_visibility="collapsed"
     )
 
@@ -323,17 +329,22 @@ elif menu == "👥 Participantes":
 elif menu == "📝 Encuestas":
     st.switch_page("pages/encuestas.py")
 
-elif menu == "🧹 Limpieza de datos":
-    st.switch_page("pages/limpieza.py")
-    
 elif menu == "⚠️ Riesgo":
     st.switch_page("pages/riesgo.py")
-    
+
+elif menu == "🧹 Limpieza de datos":
+    st.switch_page("pages/limpieza.py")
+
+elif menu == "📥 Importar datos históricos":
+    st.switch_page("pages/importar_datos.py")
+
 elif menu == "📄 Reportes":
     st.switch_page("pages/reportes.py")
-    
+
 elif menu == "⚙️ Administración":
     st.switch_page("pages/administracion.py")
+
+
 # =========================
 # ENCABEZADO
 # =========================
@@ -343,8 +354,8 @@ st.markdown(
 <div class="page-heading">
 <h1>Respaldo y recuperación</h1>
 <p>
-Genera copias de seguridad binarias y recupera
-los datos analíticos del sistema cuando sea necesario.
+Genera copias de seguridad comprimidas y recupera
+los datos principales del sistema cuando sea necesario.
 </p>
 </div>
 """,
@@ -357,22 +368,82 @@ los datos analíticos del sistema cuando sea necesario.
 # =========================
 
 st.info(
-    "El respaldo incluye participantes, encuestas, respuestas "
-    "y resultados de riesgo. No incluye contraseñas ni cuentas "
-    "de autenticación."
+    "El respaldo incluye perfiles, participantes, respuestas de la "
+    "encuesta de ciberseguridad y reportes generados. No incluye "
+    "contraseñas ni datos internos de autenticación."
 )
+
+
+# =========================
+# VISTA DE TABLAS RESPALDADAS
+# =========================
+
+st.markdown("### Tablas incluidas en el respaldo")
+
+col1, col2, col3, col4 = st.columns(4)
+
+try:
+    conteos = {}
+
+    for tabla in TABLAS_RESPALDO:
+        conteos[tabla] = len(
+            consultar_tabla(tabla)
+        )
+
+    with col1:
+        st.metric(
+            "Perfiles",
+            conteos.get(
+                "perfiles",
+                0
+            )
+        )
+
+    with col2:
+        st.metric(
+            "Participantes",
+            conteos.get(
+                "participantes",
+                0
+            )
+        )
+
+    with col3:
+        st.metric(
+            "Encuestas nuevas",
+            conteos.get(
+                "respuestas_encuesta_ciberseguridad",
+                0
+            )
+        )
+
+    with col4:
+        st.metric(
+            "Reportes",
+            conteos.get(
+                "reportes",
+                0
+            )
+        )
+
+except Exception:
+    st.warning(
+        "No se pudieron calcular los conteos de las tablas."
+    )
 
 
 # =========================
 # GENERAR RESPALDO
 # =========================
 
+st.divider()
+
 st.markdown("### Generar respaldo")
 
 st.write(
     "Descarga una copia comprimida de los datos actuales. "
     "El archivo puede almacenarse de forma segura para "
-    "utilizarlo posteriormente."
+    "utilizarlo posteriormente como recuperación."
 )
 
 if st.button(
@@ -387,9 +458,10 @@ if st.button(
             respaldo_binario
         )
 
-        mostrar_toast(
+        st.toast(
             "Respaldo generado correctamente.",
-            "✅"
+            icon="✅",
+            duration=4
         )
 
     except Exception as error:
@@ -417,12 +489,11 @@ if "respaldo_binario" in st.session_state:
     )
 
 
-st.divider()
-
-
 # =========================
 # RESTAURAR RESPALDO
 # =========================
+
+st.divider()
 
 st.markdown("### Restaurar respaldo")
 
@@ -460,35 +531,52 @@ if archivo_subido is not None:
         )
 
         st.write(
+            f"**Versión:** {metadata.get('version')}"
+        )
+
+        st.write(
             f"**Fecha de generación:** "
             f"{metadata.get('fecha_generacion')}"
         )
 
-        col1, col2, col3, col4 = st.columns(4)
+        col_r1, col_r2, col_r3, col_r4 = st.columns(4)
 
-        with col1:
+        with col_r1:
+            st.metric(
+                "Perfiles",
+                len(
+                    datos["perfiles"]
+                )
+            )
+
+        with col_r2:
             st.metric(
                 "Participantes",
-                len(datos["participantes"])
+                len(
+                    datos["participantes"]
+                )
             )
 
-        with col2:
+        with col_r3:
             st.metric(
-                "Encuestas",
-                len(datos["encuestas"])
+                "Encuestas nuevas",
+                len(
+                    datos["respuestas_encuesta_ciberseguridad"]
+                )
             )
 
-        with col3:
+        with col_r4:
             st.metric(
-                "Respuestas",
-                len(datos["respuestas_encuesta"])
+                "Reportes",
+                len(
+                    datos["reportes"]
+                )
             )
 
-        with col4:
-            st.metric(
-                "Resultados",
-                len(datos["resultados_riesgo"])
-            )
+        st.warning(
+            "La restauración no elimina datos existentes. Solo intenta "
+            "insertar o actualizar registros incluidos en el respaldo."
+        )
 
         confirmar = st.checkbox(
             "Confirmo que revisé el respaldo y deseo restaurarlo."
@@ -505,16 +593,19 @@ if archivo_subido is not None:
                     respaldo_validado
                 )
 
-                mostrar_toast(
+                st.toast(
                     "Datos restaurados correctamente.",
-                    "✅"
+                    icon="✅",
+                    duration=4
                 )
 
                 st.success(
                     "✅ La recuperación se completó correctamente."
                 )
 
-                st.json(resumen)
+                st.json(
+                    resumen
+                )
 
             except Exception as error:
                 st.error(

@@ -1,6 +1,5 @@
 import os
 import time
-from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -37,16 +36,12 @@ supabase: Client = create_client(
     SUPABASE_KEY
 )
 
+
 # =========================
 # RESTAURAR SESIÓN
 # =========================
-def restaurar_sesion():
-    """
-    Restaura la sesión de Supabase.
-    Si existe un problema temporal de conexión,
-    realiza un segundo intento automáticamente.
-    """
 
+def restaurar_sesion():
     access_token = st.session_state.get("access_token")
     refresh_token = st.session_state.get("refresh_token")
 
@@ -59,11 +54,9 @@ def restaurar_sesion():
                 access_token,
                 refresh_token
             )
-
             return
 
         except (TimeoutException, ConnectError):
-
             if intento == 0:
                 time.sleep(1)
 
@@ -101,7 +94,11 @@ if st.session_state.get("rol") != "admin":
 def cargar_css():
     ruta_css = ROOT_DIR / "css" / "dashboard.css"
 
-    with open(ruta_css, "r", encoding="utf-8") as archivo:
+    with open(
+        ruta_css,
+        "r",
+        encoding="utf-8"
+    ) as archivo:
         st.markdown(
             f"<style>{archivo.read()}</style>",
             unsafe_allow_html=True
@@ -130,39 +127,26 @@ def consultar_tabla(
     return respuesta.data or []
 
 
-# =========================
-# CARGAR DATOS
-# =========================
-
 try:
+    respuestas_ciberseguridad = consultar_tabla(
+        "respuestas_encuesta_ciberseguridad",
+        (
+            "id_respuesta, id_usuario, fecha_respuesta, usa_nube, "
+            "plataforma_nube, contenido_nube, nivel_conocimiento, "
+            "manejo_ciberseguridad, frecuencia_info_seguridad, "
+            "reconoce_phishing, identifica_herramientas_seguridad, "
+            "estado_antivirus, tipo_conexion, estabilidad_conexion, "
+            "frecuencia_fallas_internet, cambio_contrasenas_anual, "
+            "reutiliza_contrasenas, importancia_actualizar_contrasenas, "
+            "puntaje_riesgo, clasificacion_riesgo, observacion"
+        )
+    )
+
     participantes = consultar_tabla(
         "participantes",
         (
-            "id_participante, nombre_completo, edad, genero, "
+            "id_usuario, nombre_completo, edad, genero, "
             "ciudad, nivel_educativo"
-        )
-    )
-
-    encuestas = consultar_tabla(
-        "encuestas",
-        "id_encuesta, id_participante, fecha_aplicacion, estado"
-    )
-
-    resultados = consultar_tabla(
-        "resultados_riesgo",
-        (
-            "id_resultado, id_encuesta, puntaje_riesgo, "
-            "clasificacion_riesgo, observacion, fecha_calculo"
-        )
-    )
-
-    respuestas = consultar_tabla(
-        "respuestas_encuesta",
-        (
-            "id_encuesta, usa_misma_contrasena, usa_wifi_publico, "
-            "reconoce_phishing, usa_doble_factor, tiene_antivirus, "
-            "actualiza_contrasenas, comparte_info_redes, "
-            "nivel_conocimiento"
         )
     )
 
@@ -230,16 +214,16 @@ elif menu == "📝 Encuestas":
 
 elif menu == "🧹 Limpieza de datos":
     st.switch_page("pages/limpieza.py")
-    
+
 elif menu == "📥 Importar datos históricos":
     st.switch_page("pages/importar_datos.py")
-    
+
 elif menu == "💾 Respaldo y recuperación":
     st.switch_page("pages/respaldo.py")
-    
+
 elif menu == "📄 Reportes":
     st.switch_page("pages/reportes.py")
-    
+
 elif menu == "⚙️ Administración":
     st.switch_page("pages/administracion.py")
 
@@ -251,10 +235,10 @@ elif menu == "⚙️ Administración":
 st.markdown(
     """
 <div class="page-heading">
-<h1>Análisis de riesgo</h1>
+<h1>Análisis de riesgo digital</h1>
 <p>
-Explora los resultados de las evaluaciones, aplica filtros
-y analiza los hábitos digitales que requieren mayor atención.
+Consulta la distribución de niveles de riesgo, identifica hábitos inseguros
+y analiza los resultados obtenidos en la encuesta de ciberseguridad.
 </p>
 </div>
 """,
@@ -263,537 +247,465 @@ y analiza los hábitos digitales que requieren mayor atención.
 
 
 # =========================
-# VALIDAR DATOS
+# PREPARAR DATAFRAMES
 # =========================
 
-if not resultados:
-    st.info(
-        "Todavía no existen resultados de riesgo. "
-        "Cuando un usuario complete una encuesta, aparecerán aquí."
-    )
+df_respuestas = pd.DataFrame(
+    respuestas_ciberseguridad
+)
 
+df_participantes = pd.DataFrame(
+    participantes
+)
+
+if df_respuestas.empty:
+    st.info(
+        "Todavía no existen respuestas registradas en la nueva encuesta "
+        "de ciberseguridad."
+    )
     st.stop()
 
 
-# =========================
-# PREPARAR DATAFRAME PRINCIPAL
-# =========================
-
-df_participantes = pd.DataFrame(participantes)
-df_encuestas = pd.DataFrame(encuestas)
-df_resultados = pd.DataFrame(resultados)
-df_respuestas = pd.DataFrame(respuestas)
-
-df_resultados["puntaje_riesgo"] = pd.to_numeric(
-    df_resultados["puntaje_riesgo"],
+df_respuestas["fecha_respuesta"] = pd.to_datetime(
+    df_respuestas["fecha_respuesta"],
     errors="coerce"
 )
 
-df_resultados["fecha_calculo"] = pd.to_datetime(
-    df_resultados["fecha_calculo"],
+df_respuestas["puntaje_riesgo"] = pd.to_numeric(
+    df_respuestas["puntaje_riesgo"],
     errors="coerce"
 )
 
-df_encuestas["fecha_aplicacion"] = pd.to_datetime(
-    df_encuestas["fecha_aplicacion"],
-    errors="coerce"
-)
-
-df_analisis = (
-    df_resultados
-    .merge(
-        df_encuestas,
-        on="id_encuesta",
-        how="left"
-    )
-    .merge(
-        df_participantes,
-        on="id_participante",
-        how="left"
-    )
-)
-
-df_analisis["nombre_completo"] = (
-    df_analisis["nombre_completo"]
-    .fillna("Participante sin nombre")
-)
-
-df_analisis["ciudad"] = (
-    df_analisis["ciudad"]
-    .fillna("Sin registrar")
-)
-
-df_analisis["nivel_educativo"] = (
-    df_analisis["nivel_educativo"]
-    .fillna("Sin registrar")
-)
-
-df_analisis["clasificacion_riesgo"] = (
-    df_analisis["clasificacion_riesgo"]
-    .fillna("sin calcular")
+df_respuestas["clasificacion_riesgo"] = (
+    df_respuestas["clasificacion_riesgo"]
+    .fillna("sin clasificar")
     .str.lower()
 )
 
 
-# =========================
-# FILTROS
-# =========================
-
-st.markdown("### Filtros de análisis")
-
-filtro1, filtro2, filtro3, filtro4 = st.columns(4)
-
-with filtro1:
-    nivel_riesgo = st.selectbox(
-        "Clasificación de riesgo",
-        [
-            "Todos",
-            "Alto",
-            "Medio",
-            "Bajo"
-        ]
+if not df_participantes.empty:
+    df_respuestas = df_respuestas.merge(
+        df_participantes,
+        on="id_usuario",
+        how="left"
     )
 
-with filtro2:
-    ciudades = [
-        "Todas"
-    ] + sorted(
-        df_analisis["ciudad"]
-        .dropna()
-        .unique()
-        .tolist()
-    )
-
-    ciudad_seleccionada = st.selectbox(
-        "Ciudad",
-        ciudades
-    )
-
-with filtro3:
-    niveles_educativos = [
-        "Todos"
-    ] + sorted(
-        df_analisis["nivel_educativo"]
-        .dropna()
-        .unique()
-        .tolist()
-    )
-
-    nivel_educativo_seleccionado = st.selectbox(
-        "Nivel educativo",
-        niveles_educativos
-    )
-
-with filtro4:
-    fechas_disponibles = (
-        df_analisis["fecha_aplicacion"]
-        .dropna()
-        .dt.date
-    )
-
-    if fechas_disponibles.empty:
-        fecha_desde = date.today()
-        fecha_hasta = date.today()
-
-    else:
-        fecha_desde = fechas_disponibles.min()
-        fecha_hasta = fechas_disponibles.max()
-
-    rango_fechas = st.date_input(
-        "Rango de fechas",
-        value=(
-            fecha_desde,
-            fecha_hasta
-        )
-    )
-
-
-# =========================
-# APLICAR FILTROS
-# =========================
-
-df_filtrado = df_analisis.copy()
-
-if nivel_riesgo != "Todos":
-    df_filtrado = df_filtrado[
-        df_filtrado["clasificacion_riesgo"]
-        == nivel_riesgo.lower()
-    ]
-
-if ciudad_seleccionada != "Todas":
-    df_filtrado = df_filtrado[
-        df_filtrado["ciudad"]
-        == ciudad_seleccionada
-    ]
-
-if nivel_educativo_seleccionado != "Todos":
-    df_filtrado = df_filtrado[
-        df_filtrado["nivel_educativo"]
-        == nivel_educativo_seleccionado
-    ]
-
-if isinstance(rango_fechas, tuple) and len(rango_fechas) == 2:
-
-    fecha_inicial, fecha_final = rango_fechas
-
-    df_filtrado = df_filtrado[
-        (
-            df_filtrado["fecha_aplicacion"]
-            .dt.date
-            >= fecha_inicial
-        )
-        &
-        (
-            df_filtrado["fecha_aplicacion"]
-            .dt.date
-            <= fecha_final
-        )
-    ]
+else:
+    df_respuestas["nombre_completo"] = "No disponible"
 
 
 # =========================
 # MÉTRICAS PRINCIPALES
 # =========================
 
-total_resultados = len(df_filtrado)
+total_evaluaciones = len(df_respuestas)
 
-puntaje_promedio = (
-    round(
-        df_filtrado["puntaje_riesgo"].mean(),
-        1
-    )
-    if total_resultados > 0
-    else 0
-)
-
-participantes_evaluados = (
-    df_filtrado["id_participante"]
+promedio_riesgo = round(
+    df_respuestas["puntaje_riesgo"]
     .dropna()
-    .nunique()
+    .mean(),
+    1
 )
 
 cantidad_alto = len(
-    df_filtrado[
-        df_filtrado["clasificacion_riesgo"]
-        == "alto"
+    df_respuestas[
+        df_respuestas["clasificacion_riesgo"] == "alto"
     ]
 )
 
-porcentaje_alto = (
-    round(
-        cantidad_alto
-        / total_resultados
-        * 100,
-        1
-    )
-    if total_resultados > 0
-    else 0
+cantidad_medio = len(
+    df_respuestas[
+        df_respuestas["clasificacion_riesgo"] == "medio"
+    ]
 )
+
+cantidad_bajo = len(
+    df_respuestas[
+        df_respuestas["clasificacion_riesgo"] == "bajo"
+    ]
+)
+
+porcentaje_alto = round(
+    cantidad_alto / total_evaluaciones * 100,
+    1
+)
+
+porcentaje_medio = round(
+    cantidad_medio / total_evaluaciones * 100,
+    1
+)
+
+porcentaje_bajo = round(
+    cantidad_bajo / total_evaluaciones * 100,
+    1
+)
+
 
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
-        "Resultados analizados",
-        total_resultados
+        "Evaluaciones",
+        total_evaluaciones
     )
 
 with col2:
     st.metric(
-        "Participantes evaluados",
-        participantes_evaluados
+        "Promedio de riesgo",
+        promedio_riesgo
     )
 
 with col3:
     st.metric(
-        "Puntaje promedio",
-        puntaje_promedio
+        "Riesgo alto",
+        f"{porcentaje_alto}%"
     )
 
 with col4:
     st.metric(
-        "Resultados con riesgo alto",
-        f"{porcentaje_alto}%"
+        "Riesgo medio",
+        f"{porcentaje_medio}%"
     )
-
-
-st.write("")
 
 
 # =========================
 # PESTAÑAS
 # =========================
 
-tab_resumen, tab_habitos, tab_tendencia, tab_detalle = st.tabs(
+tab_general, tab_factores, tab_detalle = st.tabs(
     [
-        "📊 Distribución",
-        "🔐 Hábitos inseguros",
-        "📈 Tendencia",
-        "📋 Resultados individuales"
+        "📊 Vista general",
+        "⚠️ Factores de riesgo",
+        "📋 Detalle de evaluaciones"
     ]
 )
 
 
 # =========================
-# TAB: DISTRIBUCIÓN
+# TAB 1: VISTA GENERAL
 # =========================
 
-with tab_resumen:
+with tab_general:
 
-    st.markdown("### Distribución del nivel de riesgo")
+    col_a, col_b = st.columns(
+        [1, 1]
+    )
 
-    if df_filtrado.empty:
-        st.info(
-            "No existen resultados que coincidan con los filtros."
+    with col_a:
+
+        st.markdown(
+            """
+            <div class="section-title">
+                Distribución por clasificación de riesgo
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
-    else:
-        distribucion = (
-            df_filtrado["clasificacion_riesgo"]
-            .value_counts()
-            .rename_axis("Nivel de riesgo")
-            .reset_index(name="Cantidad")
-        )
-
-        distribucion["Nivel de riesgo"] = (
-            distribucion["Nivel de riesgo"]
-            .str.title()
-        )
+        df_clasificacion = pd.DataFrame({
+            "Clasificación": [
+                "Alto",
+                "Medio",
+                "Bajo"
+            ],
+            "Cantidad": [
+                cantidad_alto,
+                cantidad_medio,
+                cantidad_bajo
+            ]
+        })
 
         st.bar_chart(
-            distribucion,
-            x="Nivel de riesgo",
+            df_clasificacion,
+            x="Clasificación",
             y="Cantidad",
             use_container_width=True
         )
 
-        st.dataframe(
-            distribucion,
-            use_container_width=True,
-            hide_index=True
+    with col_b:
+
+        st.markdown(
+            """
+            <div class="section-title">
+                Tendencia de evaluaciones
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
-
-# =========================
-# TAB: HÁBITOS INSEGUROS
-# =========================
-
-with tab_habitos:
-
-    st.markdown("### Hábitos inseguros más frecuentes")
-
-    ids_encuestas_filtradas = (
-        df_filtrado["id_encuesta"]
-        .dropna()
-        .tolist()
-    )
-
-    if df_respuestas.empty or not ids_encuestas_filtradas:
-        st.info(
-            "No existen respuestas para analizar con los filtros actuales."
-        )
-
-    else:
-        respuestas_filtradas = df_respuestas[
-            df_respuestas["id_encuesta"]
-            .isin(ids_encuestas_filtradas)
-        ].copy()
-
-        if respuestas_filtradas.empty:
-            st.info(
-                "No existen respuestas para analizar con los filtros actuales."
-            )
-
-        else:
-            habitos = {
-                "Usa la misma contraseña": int(
-                    respuestas_filtradas[
-                        "usa_misma_contrasena"
-                    ].sum()
-                ),
-                "Usa Wi-Fi público": int(
-                    respuestas_filtradas[
-                        "usa_wifi_publico"
-                    ].sum()
-                ),
-                "No reconoce phishing": int(
-                    (
-                        respuestas_filtradas[
-                            "reconoce_phishing"
-                        ]
-                        != "si"
-                    ).sum()
-                ),
-                "No usa doble factor": int(
-                    (
-                        ~respuestas_filtradas[
-                            "usa_doble_factor"
-                        ]
-                    ).sum()
-                ),
-                "No tiene antivirus": int(
-                    (
-                        ~respuestas_filtradas[
-                            "tiene_antivirus"
-                        ]
-                    ).sum()
-                ),
-                "No actualiza contraseñas": int(
-                    (
-                        ~respuestas_filtradas[
-                            "actualiza_contrasenas"
-                        ]
-                    ).sum()
-                ),
-                "Comparte información en redes": int(
-                    respuestas_filtradas[
-                        "comparte_info_redes"
-                    ].sum()
-                )
-            }
-
-            df_habitos = (
-                pd.DataFrame(
-                    list(habitos.items()),
-                    columns=[
-                        "Hábito inseguro",
-                        "Cantidad"
-                    ]
-                )
-                .sort_values(
-                    "Cantidad",
-                    ascending=False
-                )
-            )
-
-            st.bar_chart(
-                df_habitos,
-                x="Hábito inseguro",
-                y="Cantidad",
-                use_container_width=True
-            )
-
-            st.dataframe(
-                df_habitos,
-                use_container_width=True,
-                hide_index=True
-            )
-
-
-# =========================
-# TAB: TENDENCIA
-# =========================
-
-with tab_tendencia:
-
-    st.markdown("### Tendencia de evaluaciones por fecha")
-
-    if df_filtrado.empty:
-        st.info(
-            "No existen resultados que coincidan con los filtros."
-        )
-
-    else:
         tendencia = (
-            df_filtrado
+            df_respuestas
             .dropna(
-                subset=[
-                    "fecha_aplicacion"
-                ]
+                subset=["fecha_respuesta"]
             )
             .assign(
                 fecha=lambda datos: (
-                    datos["fecha_aplicacion"]
+                    datos["fecha_respuesta"]
                     .dt.date
                 )
             )
-            .groupby(
-                [
-                    "fecha",
-                    "clasificacion_riesgo"
-                ]
-            )
+            .groupby("fecha")
             .size()
-            .unstack(
-                fill_value=0
-            )
-            .sort_index()
+            .reset_index(name="Evaluaciones")
         )
 
-        tendencia.columns = [
-            columna.title()
-            for columna in tendencia.columns
+        st.line_chart(
+            tendencia,
+            x="fecha",
+            y="Evaluaciones",
+            use_container_width=True
+        )
+
+    st.markdown(
+        """
+        <div class="section-title">
+            Puntajes de riesgo registrados
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    df_puntajes = (
+        df_respuestas[
+            [
+                "fecha_respuesta",
+                "puntaje_riesgo",
+                "clasificacion_riesgo"
+            ]
         ]
+        .dropna(
+            subset=["puntaje_riesgo"]
+        )
+        .sort_values(
+            "fecha_respuesta"
+        )
+    )
 
-        if tendencia.empty:
-            st.info(
-                "No existen fechas disponibles para mostrar la tendencia."
-            )
-
-        else:
-            st.line_chart(
-                tendencia,
-                use_container_width=True
-            )
+    st.bar_chart(
+        df_puntajes,
+        x="fecha_respuesta",
+        y="puntaje_riesgo",
+        use_container_width=True
+    )
 
 
 # =========================
-# TAB: RESULTADOS INDIVIDUALES
+# TAB 2: FACTORES DE RIESGO
+# =========================
+
+with tab_factores:
+
+    st.markdown(
+        """
+        <div class="section-title">
+            Hábitos y condiciones que aumentan el riesgo
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    factores = {
+        "Reutiliza contraseñas": int(
+            df_respuestas[
+                df_respuestas["reutiliza_contrasenas"].isin(
+                    [
+                        "Sí",
+                        "A veces"
+                    ]
+                )
+            ].shape[0]
+        ),
+
+        "No reconoce phishing": int(
+            df_respuestas[
+                df_respuestas["reconoce_phishing"].isin(
+                    [
+                        "No",
+                        "A veces"
+                    ]
+                )
+            ].shape[0]
+        ),
+
+        "Antivirus desactualizado o ausente": int(
+            df_respuestas[
+                df_respuestas["estado_antivirus"].isin(
+                    [
+                        "No tengo antivirus",
+                        "Tengo antivirus, pero no está actualizado",
+                        "No sé"
+                    ]
+                )
+            ].shape[0]
+        ),
+
+        "Bajo conocimiento": int(
+            df_respuestas[
+                df_respuestas["nivel_conocimiento"] == "Bajo"
+            ].shape[0]
+        ),
+
+        "Nunca cambia contraseñas": int(
+            df_respuestas[
+                df_respuestas["cambio_contrasenas_anual"] == "Nunca"
+            ].shape[0]
+        ),
+
+        "Poca información de seguridad": int(
+            df_respuestas[
+                df_respuestas["frecuencia_info_seguridad"].isin(
+                    [
+                        "Nunca",
+                        "Rara vez"
+                    ]
+                )
+            ].shape[0]
+        ),
+
+        "Manejo bajo de ciberseguridad": int(
+            df_respuestas[
+                df_respuestas["manejo_ciberseguridad"].isin(
+                    [
+                        1,
+                        2
+                    ]
+                )
+            ].shape[0]
+        ),
+
+        "Conexión inestable": int(
+            df_respuestas[
+                df_respuestas["estabilidad_conexion"].isin(
+                    [
+                        1,
+                        2
+                    ]
+                )
+            ].shape[0]
+        )
+    }
+
+    df_factores = (
+        pd.DataFrame(
+            list(factores.items()),
+            columns=[
+                "Factor de riesgo",
+                "Cantidad"
+            ]
+        )
+        .sort_values(
+            "Cantidad",
+            ascending=False
+        )
+    )
+
+    st.bar_chart(
+        df_factores,
+        x="Factor de riesgo",
+        y="Cantidad",
+        use_container_width=True
+    )
+
+    st.markdown(
+        """
+        <div class="section-title">
+            Relación entre conocimiento y clasificación de riesgo
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    tabla_conocimiento = pd.crosstab(
+        df_respuestas["nivel_conocimiento"],
+        df_respuestas["clasificacion_riesgo"]
+    )
+
+    st.dataframe(
+        tabla_conocimiento,
+        use_container_width=True
+    )
+
+    st.markdown(
+        """
+        <div class="section-title">
+            Relación entre phishing y clasificación de riesgo
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    tabla_phishing = pd.crosstab(
+        df_respuestas["reconoce_phishing"],
+        df_respuestas["clasificacion_riesgo"]
+    )
+
+    st.dataframe(
+        tabla_phishing,
+        use_container_width=True
+    )
+
+
+# =========================
+# TAB 3: DETALLE
 # =========================
 
 with tab_detalle:
 
-    st.markdown("### Resultados individuales")
+    st.markdown(
+        """
+        <div class="section-title">
+            Evaluaciones registradas
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    if df_filtrado.empty:
-        st.info(
-            "No existen resultados que coincidan con los filtros."
+    filtro_riesgo = st.selectbox(
+        "Filtrar por clasificación",
+        [
+            "Todas",
+            "alto",
+            "medio",
+            "bajo"
+        ]
+    )
+
+    df_detalle = df_respuestas.copy()
+
+    if filtro_riesgo != "Todas":
+        df_detalle = df_detalle[
+            df_detalle["clasificacion_riesgo"] == filtro_riesgo
+        ]
+
+    columnas_detalle = [
+        "fecha_respuesta",
+        "nombre_completo",
+        "nivel_conocimiento",
+        "reconoce_phishing",
+        "estado_antivirus",
+        "cambio_contrasenas_anual",
+        "reutiliza_contrasenas",
+        "puntaje_riesgo",
+        "clasificacion_riesgo",
+        "observacion"
+    ]
+
+    columnas_existentes = [
+        columna
+        for columna in columnas_detalle
+        if columna in df_detalle.columns
+    ]
+
+    df_detalle = (
+        df_detalle[columnas_existentes]
+        .sort_values(
+            "fecha_respuesta",
+            ascending=False
         )
+    )
 
-    else:
-        tabla_resultados = df_filtrado[
-            [
-                "nombre_completo",
-                "ciudad",
-                "nivel_educativo",
-                "fecha_aplicacion",
-                "puntaje_riesgo",
-                "clasificacion_riesgo",
-                "observacion"
-            ]
-        ].copy()
-
-        tabla_resultados["clasificacion_riesgo"] = (
-            tabla_resultados[
-                "clasificacion_riesgo"
-            ]
-            .str.title()
-        )
-
-        tabla_resultados["fecha_aplicacion"] = (
-            tabla_resultados[
-                "fecha_aplicacion"
-            ]
-            .dt.strftime(
-                "%d/%m/%Y %H:%M"
-            )
-        )
-
-        st.caption(
-            f"Mostrando {len(tabla_resultados)} resultados."
-        )
-
-        st.dataframe(
-            tabla_resultados,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "nombre_completo": "Participante",
-                "ciudad": "Ciudad",
-                "nivel_educativo": "Nivel educativo",
-                "fecha_aplicacion": "Fecha",
-                "puntaje_riesgo": "Puntaje",
-                "clasificacion_riesgo": "Clasificación",
-                "observacion": "Observación"
-            }
-        )
+    st.dataframe(
+        df_detalle,
+        use_container_width=True,
+        hide_index=True
+    )

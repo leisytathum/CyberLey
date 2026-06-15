@@ -1,9 +1,11 @@
 import os
+import time
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
+from httpx import ConnectError, TimeoutException
 from supabase import Client, create_client
 
 
@@ -29,31 +31,47 @@ if not SUPABASE_KEY:
     st.error("No se encontró SUPABASE_KEY en el archivo .env.")
     st.stop()
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase: Client = create_client(
+    SUPABASE_URL,
+    SUPABASE_KEY
+)
+
+
+# =========================
+# RESTAURAR SESIÓN
+# =========================
+
 access_token = st.session_state.get("access_token")
 refresh_token = st.session_state.get("refresh_token")
 
 if access_token and refresh_token:
-    supabase.auth.set_session(
-        access_token,
-        refresh_token
-    )
 
-# =========================
-# CSS
-# =========================
+    sesion_restaurada = False
 
-def cargar_css():
-    ruta_css = ROOT_DIR / "css" / "dashboard.css"
+    for intento in range(2):
+        try:
+            supabase.auth.set_session(
+                access_token,
+                refresh_token
+            )
 
-    with open(ruta_css, "r", encoding="utf-8") as archivo:
-        st.markdown(
-            f"<style>{archivo.read()}</style>",
-            unsafe_allow_html=True
+            sesion_restaurada = True
+            break
+
+        except (TimeoutException, ConnectError):
+            if intento == 0:
+                time.sleep(1)
+
+    if not sesion_restaurada:
+        st.error(
+            "No se pudo conectar con Supabase en este momento. "
+            "Revisa tu conexión e intenta nuevamente."
         )
 
+        if st.button("Reintentar conexión"):
+            st.rerun()
 
-cargar_css()
+        st.stop()
 
 
 # =========================
@@ -64,12 +82,41 @@ if "usuario" not in st.session_state:
     st.warning("Debes iniciar sesión primero.")
     st.switch_page("app.py")
 
+if st.session_state.get("rol") != "admin":
+    st.warning("Esta sección es exclusiva para administradores.")
+    st.switch_page("pages/usuario.py")
+
 
 # =========================
-# CONSULTAS A SUPABASE
+# CARGAR CSS
 # =========================
 
-def consultar_tabla(nombre_tabla: str, columnas: str = "*") -> list[dict]:
+def cargar_css():
+    ruta_css = ROOT_DIR / "css" / "dashboard.css"
+
+    with open(
+        ruta_css,
+        "r",
+        encoding="utf-8"
+    ) as archivo:
+        st.markdown(
+            f"<style>{archivo.read()}</style>",
+            unsafe_allow_html=True
+        )
+
+
+cargar_css()
+
+
+# =========================
+# CONSULTAS
+# =========================
+
+def consultar_tabla(
+    nombre_tabla: str,
+    columnas: str = "*"
+) -> list[dict]:
+
     respuesta = (
         supabase
         .table(nombre_tabla)
@@ -81,185 +128,135 @@ def consultar_tabla(nombre_tabla: str, columnas: str = "*") -> list[dict]:
 
 
 def preparar_datos_participantes() -> pd.DataFrame:
+
     participantes = consultar_tabla(
         "participantes",
         (
-            "id_participante, nombre_completo, edad, genero, "
-            "ciudad, nivel_educativo, fecha_registro"
+            "id_participante, id_usuario, nombre_completo, edad, "
+            "genero, ciudad, nivel_educativo, fecha_registro"
+        )
+    )
+
+    perfiles = consultar_tabla(
+        "perfiles",
+        "id, rol"
+    )
+
+    respuestas = consultar_tabla(
+        "respuestas_encuesta_ciberseguridad",
+        (
+            "id_respuesta, id_usuario, fecha_respuesta, "
+            "usa_nube, plataforma_nube, nivel_conocimiento, "
+            "reconoce_phishing, estado_antivirus, "
+            "reutiliza_contrasenas, tipo_conexion, "
+            "puntaje_riesgo, clasificacion_riesgo, observacion"
         )
     )
 
     if not participantes:
         return pd.DataFrame()
 
-    df_participantes = pd.DataFrame(participantes)
-
-    # =========================
-    # CANTIDAD DE ENCUESTAS
-    # =========================
-
-    encuestas = consultar_tabla(
-        "encuestas",
-        "id_encuesta, id_participante, fecha_aplicacion"
+    df_participantes = pd.DataFrame(
+        participantes
     )
 
-    if encuestas:
-        df_encuestas = pd.DataFrame(encuestas)
+    df_perfiles = pd.DataFrame(
+        perfiles
+    )
 
-        cantidad_encuestas = (
-            df_encuestas
-            .groupby("id_participante")
-            .size()
-            .reset_index(name="encuestas_realizadas")
-        )
+    df_respuestas = pd.DataFrame(
+        respuestas
+    )
+
+    # Excluir administradores
+    if not df_perfiles.empty:
 
         df_participantes = df_participantes.merge(
-            cantidad_encuestas,
-            on="id_participante",
+            df_perfiles,
+            left_on="id_usuario",
+            right_on="id",
             how="left"
         )
 
-    else:
-        df_encuestas = pd.DataFrame()
+        df_participantes = df_participantes[
+            df_participantes["rol"] == "usuario"
+        ].copy()
+
+    # Si no hay respuestas todavía
+    if df_respuestas.empty:
+
         df_participantes["encuestas_realizadas"] = 0
-
-    # =========================
-    # ÚLTIMO RESULTADO DE RIESGO
-    # =========================
-
-    resultados = consultar_tabla(
-        "resultados_riesgo",
-        (
-            "id_encuesta, puntaje_riesgo, "
-            "clasificacion_riesgo, fecha_calculo"
-        )
-    )
-
-    if resultados and not df_encuestas.empty:
-        df_resultados = pd.DataFrame(resultados)
-
-        riesgo_por_participante = df_encuestas.merge(
-            df_resultados,
-            on="id_encuesta",
-            how="inner"
-        )
-
-        riesgo_por_participante["fecha_calculo"] = pd.to_datetime(
-            riesgo_por_participante["fecha_calculo"],
-            errors="coerce"
-        )
-
-        ultimo_riesgo = (
-            riesgo_por_participante
-            .sort_values("fecha_calculo")
-            .drop_duplicates(
-                subset=["id_participante"],
-                keep="last"
-            )
-            [
-                [
-                    "id_participante",
-                    "puntaje_riesgo",
-                    "clasificacion_riesgo"
-                ]
-            ]
-        )
-
-        df_participantes = df_participantes.merge(
-            ultimo_riesgo,
-            on="id_participante",
-            how="left"
-        )
-
-    else:
+        df_participantes["fecha_ultima_evaluacion"] = None
         df_participantes["puntaje_riesgo"] = None
-        df_participantes["clasificacion_riesgo"] = "Sin evaluar"
+        df_participantes["clasificacion_riesgo"] = "Sin Evaluar"
+        df_participantes["nivel_conocimiento"] = "Sin evaluar"
+        df_participantes["reconoce_phishing"] = "Sin evaluar"
+        df_participantes["estado_antivirus"] = "Sin evaluar"
+        df_participantes["reutiliza_contrasenas"] = "Sin evaluar"
+        df_participantes["observacion"] = "Sin evaluación registrada."
 
-    # =========================
-    # PROGRESO DE GUÍAS
-    # =========================
+        return df_participantes
 
-    guias = consultar_tabla(
-        "guias_ciberseguridad",
-        "id_guia"
+    df_respuestas["fecha_respuesta"] = pd.to_datetime(
+        df_respuestas["fecha_respuesta"],
+        errors="coerce"
     )
 
-    total_guias = len(guias)
-
-    guias_completadas = consultar_tabla(
-        "guias_completadas",
-        "id_participante, id_guia"
+    df_respuestas["puntaje_riesgo"] = pd.to_numeric(
+        df_respuestas["puntaje_riesgo"],
+        errors="coerce"
     )
 
-    if guias_completadas:
-        df_guias = pd.DataFrame(guias_completadas)
+    # Cantidad de encuestas por usuario
+    cantidad_encuestas = (
+        df_respuestas
+        .groupby("id_usuario")
+        .size()
+        .reset_index(name="encuestas_realizadas")
+    )
 
-        progreso = (
-            df_guias
-            .groupby("id_participante")["id_guia"]
-            .nunique()
-            .reset_index(name="guias_completadas")
+    # Última encuesta por usuario
+    ultimas_respuestas = (
+        df_respuestas
+        .sort_values("fecha_respuesta")
+        .drop_duplicates(
+            subset=["id_usuario"],
+            keep="last"
         )
-
-        df_participantes = df_participantes.merge(
-            progreso,
-            on="id_participante",
-            how="left"
-        )
-
-    else:
-        df_participantes["guias_completadas"] = 0
-
-    df_participantes["guias_completadas"] = (
-        df_participantes["guias_completadas"]
-        .fillna(0)
-        .astype(int)
-    )
-
-    if total_guias > 0:
-        df_participantes["progreso_guias"] = (
-            df_participantes["guias_completadas"]
-            / total_guias
-            * 100
-        ).round(0).astype(int)
-
-    else:
-        df_participantes["progreso_guias"] = 0
-
-    # =========================
-    # RECOMENDACIONES PENDIENTES
-    # =========================
-
-    recomendaciones = consultar_tabla(
-        "recomendaciones",
-        "id_participante, estado"
-    )
-
-    if recomendaciones:
-        df_recomendaciones = pd.DataFrame(recomendaciones)
-
-        pendientes = (
-            df_recomendaciones[
-                df_recomendaciones["estado"] == "pendiente"
+        [
+            [
+                "id_usuario",
+                "fecha_respuesta",
+                "puntaje_riesgo",
+                "clasificacion_riesgo",
+                "nivel_conocimiento",
+                "reconoce_phishing",
+                "estado_antivirus",
+                "reutiliza_contrasenas",
+                "tipo_conexion",
+                "observacion"
             ]
-            .groupby("id_participante")
-            .size()
-            .reset_index(name="recomendaciones_pendientes")
+        ]
+        .rename(
+            columns={
+                "fecha_respuesta": "fecha_ultima_evaluacion"
+            }
         )
+    )
 
-        df_participantes = df_participantes.merge(
-            pendientes,
-            on="id_participante",
-            how="left"
-        )
+    df_participantes = df_participantes.merge(
+        cantidad_encuestas,
+        on="id_usuario",
+        how="left"
+    )
 
-    else:
-        df_participantes["recomendaciones_pendientes"] = 0
+    df_participantes = df_participantes.merge(
+        ultimas_respuestas,
+        on="id_usuario",
+        how="left"
+    )
 
-    # =========================
-    # LIMPIEZA FINAL
-    # =========================
-
+    # Limpieza final
     df_participantes["encuestas_realizadas"] = (
         df_participantes["encuestas_realizadas"]
         .fillna(0)
@@ -268,14 +265,26 @@ def preparar_datos_participantes() -> pd.DataFrame:
 
     df_participantes["clasificacion_riesgo"] = (
         df_participantes["clasificacion_riesgo"]
-        .fillna("Sin evaluar")
+        .fillna("Sin Evaluar")
         .str.title()
     )
 
-    df_participantes["recomendaciones_pendientes"] = (
-        df_participantes["recomendaciones_pendientes"]
-        .fillna(0)
-        .astype(int)
+    for columna in [
+        "nivel_conocimiento",
+        "reconoce_phishing",
+        "estado_antivirus",
+        "reutiliza_contrasenas",
+        "tipo_conexion"
+    ]:
+        if columna in df_participantes.columns:
+            df_participantes[columna] = (
+                df_participantes[columna]
+                .fillna("Sin evaluar")
+            )
+
+    df_participantes["observacion"] = (
+        df_participantes["observacion"]
+        .fillna("Sin evaluación registrada.")
     )
 
     return df_participantes
@@ -286,6 +295,7 @@ def preparar_datos_participantes() -> pd.DataFrame:
 # =========================
 
 with st.sidebar:
+
     st.image(
         str(ROOT_DIR / "Logo.png"),
         use_container_width=True
@@ -303,8 +313,9 @@ with st.sidebar:
             "👥 Participantes",
             "📝 Encuestas",
             "⚠️ Riesgo",
-            "📊 Limpieza de datos",
+            "🧹 Limpieza de datos",
             "📥 Importar datos históricos",
+            "💾 Respaldo y recuperación",
             "📄 Reportes",
             "⚙️ Administración"
         ],
@@ -314,7 +325,10 @@ with st.sidebar:
 
     st.divider()
 
-    if st.button("🚪 Cerrar sesión", use_container_width=True):
+    if st.button(
+        "🚪 Cerrar sesión",
+        use_container_width=True
+    ):
         st.session_state.clear()
         st.switch_page("app.py")
 
@@ -329,20 +343,23 @@ if menu == "🏠 Inicio":
 elif menu == "📝 Encuestas":
     st.switch_page("pages/encuestas.py")
 
-elif menu == "🧹 Limpieza de datos":
-    st.switch_page("pages/limpieza.py")
-    
-elif menu == "📥 Importar datos históricos":
-    st.switch_page("pages/importar_datos.py")
-    
-elif menu == "💾 Respaldo y recuperación":
-    st.switch_page("pages/respaldo.py")
-    
 elif menu == "⚠️ Riesgo":
     st.switch_page("pages/riesgo.py")
-    
+
+elif menu == "🧹 Limpieza de datos":
+    st.switch_page("pages/limpieza.py")
+
+elif menu == "📥 Importar datos históricos":
+    st.switch_page("pages/importar_datos.py")
+
+elif menu == "💾 Respaldo y recuperación":
+    st.switch_page("pages/respaldo.py")
+
 elif menu == "📄 Reportes":
     st.switch_page("pages/reportes.py")
+
+elif menu == "⚙️ Administración":
+    st.switch_page("pages/administracion.py")
 
 
 # =========================
@@ -351,16 +368,14 @@ elif menu == "📄 Reportes":
 
 st.markdown(
     """
-    <div class="page-heading">
-        <div>
-            <h1>Participantes</h1>
-            <p>
-                Consulta los usuarios registrados, analiza sus resultados
-                y revisa su progreso.
-            </p>
-        </div>
-    </div>
-    """,
+<div class="page-heading">
+<h1>Participantes</h1>
+<p>
+Consulta los usuarios registrados, revisa si completaron la encuesta
+y analiza su último resultado de riesgo digital.
+</p>
+</div>
+""",
     unsafe_allow_html=True
 )
 
@@ -373,7 +388,10 @@ try:
     df = preparar_datos_participantes()
 
 except Exception as error:
-    st.error(f"No se pudieron cargar los participantes: {error}")
+    st.error(
+        "No se pudieron cargar los participantes."
+    )
+    st.write(error)
     st.stop()
 
 
@@ -389,42 +407,60 @@ if df.empty:
 total_participantes = len(df)
 
 participantes_evaluados = len(
-    df[df["clasificacion_riesgo"] != "Sin Evaluar"]
+    df[
+        df["encuestas_realizadas"] > 0
+    ]
 )
+
+pendientes_encuesta = total_participantes - participantes_evaluados
 
 riesgo_alto = len(
-    df[df["clasificacion_riesgo"] == "Alto"]
+    df[
+        df["clasificacion_riesgo"] == "Alto"
+    ]
 )
 
-promedio_progreso = round(
-    df["progreso_guias"].mean(),
-    1
+promedio_riesgo = (
+    round(
+        df["puntaje_riesgo"]
+        .dropna()
+        .mean(),
+        1
+    )
+    if not df["puntaje_riesgo"].dropna().empty
+    else 0
 )
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.metric(
-        "Participantes registrados",
+        "Participantes",
         total_participantes
     )
 
 with col2:
     st.metric(
-        "Participantes evaluados",
+        "Evaluados",
         participantes_evaluados
     )
 
 with col3:
     st.metric(
-        "Riesgo alto",
-        riesgo_alto
+        "Pendientes",
+        pendientes_encuesta
     )
 
 with col4:
     st.metric(
-        "Progreso promedio",
-        f"{promedio_progreso}%"
+        "Riesgo alto",
+        riesgo_alto
+    )
+
+with col5:
+    st.metric(
+        "Promedio riesgo",
+        promedio_riesgo
     )
 
 
@@ -446,7 +482,9 @@ with filtro1:
     )
 
 with filtro2:
-    ciudades = ["Todas"] + sorted(
+    ciudades = [
+        "Todas"
+    ] + sorted(
         df["ciudad"]
         .dropna()
         .unique()
@@ -459,7 +497,9 @@ with filtro2:
     )
 
 with filtro3:
-    niveles = ["Todos"] + sorted(
+    niveles = [
+        "Todos"
+    ] + sorted(
         df["nivel_educativo"]
         .dropna()
         .unique()
@@ -510,8 +550,7 @@ if nivel_seleccionado != "Todos":
 
 if riesgo_seleccionado != "Todos":
     df_filtrado = df_filtrado[
-        df_filtrado["clasificacion_riesgo"]
-        == riesgo_seleccionado
+        df_filtrado["clasificacion_riesgo"] == riesgo_seleccionado
     ]
 
 
@@ -529,30 +568,44 @@ columnas_tabla = [
     "ciudad",
     "nivel_educativo",
     "encuestas_realizadas",
-    "clasificacion_riesgo",
-    "progreso_guias",
-    "recomendaciones_pendientes"
+    "fecha_ultima_evaluacion",
+    "puntaje_riesgo",
+    "clasificacion_riesgo"
 ]
 
-st.dataframe(
-    df_filtrado[columnas_tabla],
-    use_container_width=True,
-    hide_index=True,
-    column_config={
+columnas_existentes = [
+    columna
+    for columna in columnas_tabla
+    if columna in df_filtrado.columns
+]
+
+df_tabla = df_filtrado[
+    columnas_existentes
+].copy()
+
+if "fecha_ultima_evaluacion" in df_tabla.columns:
+    df_tabla["fecha_ultima_evaluacion"] = pd.to_datetime(
+        df_tabla["fecha_ultima_evaluacion"],
+        errors="coerce"
+    ).dt.strftime("%d/%m/%Y")
+
+df_tabla = df_tabla.rename(
+    columns={
         "nombre_completo": "Nombre completo",
         "edad": "Edad",
         "ciudad": "Ciudad",
         "nivel_educativo": "Nivel educativo",
         "encuestas_realizadas": "Encuestas",
-        "clasificacion_riesgo": "Nivel de riesgo",
-        "progreso_guias": st.column_config.ProgressColumn(
-            "Progreso en guías",
-            min_value=0,
-            max_value=100,
-            format="%d%%"
-        ),
-        "recomendaciones_pendientes": "Pendientes"
+        "fecha_ultima_evaluacion": "Última evaluación",
+        "puntaje_riesgo": "Puntaje",
+        "clasificacion_riesgo": "Nivel de riesgo"
     }
+)
+
+st.dataframe(
+    df_tabla,
+    use_container_width=True,
+    hide_index=True
 )
 
 
@@ -561,10 +614,13 @@ st.dataframe(
 # =========================
 
 st.write("")
+
 st.markdown("### Detalle del participante")
 
 if df_filtrado.empty:
-    st.info("No hay participantes que coincidan con los filtros.")
+    st.info(
+        "No hay participantes que coincidan con los filtros."
+    )
 
 else:
     opciones = {
@@ -582,7 +638,9 @@ else:
         opciones.keys()
     )
 
-    participante_id = opciones[etiqueta_seleccionada]
+    participante_id = opciones[
+        etiqueta_seleccionada
+    ]
 
     participante = df[
         df["id_participante"] == participante_id
@@ -593,7 +651,9 @@ else:
     with detalle1:
         st.metric(
             "Encuestas realizadas",
-            int(participante["encuestas_realizadas"])
+            int(
+                participante["encuestas_realizadas"]
+            )
         )
 
     with detalle2:
@@ -604,25 +664,39 @@ else:
 
     with detalle3:
         st.metric(
-            "Progreso en guías",
-            f"{int(participante['progreso_guias'])}%"
+            "Puntaje",
+            (
+                int(participante["puntaje_riesgo"])
+                if pd.notna(
+                    participante["puntaje_riesgo"]
+                )
+                else "Sin evaluar"
+            )
         )
 
     with detalle4:
         st.metric(
-            "Recomendaciones pendientes",
-            int(participante["recomendaciones_pendientes"])
+            "Reconoce phishing",
+            participante.get(
+                "reconoce_phishing",
+                "Sin evaluar"
+            )
         )
 
     st.markdown(
         f"""
-        <div class="participant-detail-card">
-            <h3>{participante["nombre_completo"]}</h3>
-            <p><b>Edad:</b> {participante["edad"]}</p>
-            <p><b>Género:</b> {participante["genero"]}</p>
-            <p><b>Ciudad:</b> {participante["ciudad"]}</p>
-            <p><b>Nivel educativo:</b> {participante["nivel_educativo"]}</p>
-        </div>
-        """,
+<div class="participant-detail-card">
+<h3>{participante["nombre_completo"]}</h3>
+<p><b>Edad:</b> {participante.get("edad", "No disponible")}</p>
+<p><b>Género:</b> {participante.get("genero", "No disponible")}</p>
+<p><b>Ciudad:</b> {participante.get("ciudad", "No disponible")}</p>
+<p><b>Nivel educativo:</b> {participante.get("nivel_educativo", "No disponible")}</p>
+<p><b>Nivel de conocimiento:</b> {participante.get("nivel_conocimiento", "Sin evaluar")}</p>
+<p><b>Antivirus:</b> {participante.get("estado_antivirus", "Sin evaluar")}</p>
+<p><b>Reutiliza contraseñas:</b> {participante.get("reutiliza_contrasenas", "Sin evaluar")}</p>
+<p><b>Tipo de conexión:</b> {participante.get("tipo_conexion", "Sin evaluar")}</p>
+<p><b>Observación:</b> {participante.get("observacion", "Sin evaluación registrada.")}</p>
+</div>
+""",
         unsafe_allow_html=True
     )

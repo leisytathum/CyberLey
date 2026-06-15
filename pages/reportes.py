@@ -43,11 +43,6 @@ supabase: Client = create_client(
 # =========================
 
 def restaurar_sesion():
-    """
-    Restaura la sesión del administrador.
-    Realiza un segundo intento si Supabase tarda en responder.
-    """
-
     access_token = st.session_state.get("access_token")
     refresh_token = st.session_state.get("refresh_token")
 
@@ -60,7 +55,6 @@ def restaurar_sesion():
                 access_token,
                 refresh_token
             )
-
             return
 
         except (TimeoutException, ConnectError):
@@ -101,16 +95,22 @@ if st.session_state.get("rol") != "admin":
 def cargar_css():
     ruta_css = ROOT_DIR / "css" / "dashboard.css"
 
-    with open(ruta_css, "r", encoding="utf-8") as archivo:
+    with open(
+        ruta_css,
+        "r",
+        encoding="utf-8"
+    ) as archivo:
         st.markdown(
             f"<style>{archivo.read()}</style>",
             unsafe_allow_html=True
         )
+
+
 cargar_css()
 
 
 # =========================
-# CONSULTAS A SUPABASE
+# FUNCIONES
 # =========================
 
 def consultar_tabla(
@@ -136,51 +136,20 @@ def registrar_reporte(
     Registra en Supabase que el administrador generó un reporte.
     """
 
-    supabase.table("reportes").insert({
-        "generado_por": st.session_state["usuario_id"],
-        "tipo_reporte": tipo_reporte,
-        "descripcion": descripcion
-    }).execute()
+    try:
+        supabase.table("reportes").insert({
+            "generado_por": st.session_state["usuario_id"],
+            "tipo_reporte": tipo_reporte,
+            "descripcion": descripcion
+        }).execute()
 
-
-def convertir_booleanos(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Convierte True y False a Sí y No para que el CSV
-    sea más fácil de interpretar.
-    """
-
-    df_exportar = df.copy()
-
-    columnas_booleanas = [
-        "usa_misma_contrasena",
-        "usa_wifi_publico",
-        "usa_doble_factor",
-        "tiene_antivirus",
-        "actualiza_contrasenas",
-        "comparte_info_redes"
-    ]
-
-    for columna in columnas_booleanas:
-        if columna in df_exportar.columns:
-            df_exportar[columna] = (
-                df_exportar[columna]
-                .map({
-                    True: "Sí",
-                    False: "No"
-                })
-                .fillna("Sin registrar")
-            )
-
-    return df_exportar
+    except Exception:
+        pass
 
 
 def preparar_csv(
     df: pd.DataFrame
 ) -> bytes:
-    """
-    Convierte un DataFrame a CSV utilizando UTF-8 con BOM
-    para facilitar su apertura en Excel.
-    """
 
     contenido = df.to_csv(
         index=False,
@@ -188,6 +157,96 @@ def preparar_csv(
     )
 
     return contenido.encode("utf-8-sig")
+
+
+def preparar_dataframe_general(
+    participantes: list[dict],
+    perfiles: list[dict],
+    respuestas: list[dict]
+) -> pd.DataFrame:
+
+    df_participantes = pd.DataFrame(
+        participantes
+    )
+
+    df_perfiles = pd.DataFrame(
+        perfiles
+    )
+
+    df_respuestas = pd.DataFrame(
+        respuestas
+    )
+
+    if df_participantes.empty:
+        return pd.DataFrame()
+
+    # Excluir administradores
+    if not df_perfiles.empty:
+        df_participantes = df_participantes.merge(
+            df_perfiles,
+            left_on="id_usuario",
+            right_on="id",
+            how="left"
+        )
+
+        df_participantes = df_participantes[
+            df_participantes["rol"] == "usuario"
+        ].copy()
+
+    # Unir participantes con respuestas nuevas
+    if not df_respuestas.empty:
+        df_general = df_participantes.merge(
+            df_respuestas,
+            on="id_usuario",
+            how="left"
+        )
+
+    else:
+        df_general = df_participantes.copy()
+
+    # Fechas
+    if "fecha_respuesta" in df_general.columns:
+        df_general["fecha_respuesta"] = pd.to_datetime(
+            df_general["fecha_respuesta"],
+            errors="coerce"
+        )
+
+    if "fecha_registro" in df_general.columns:
+        df_general["fecha_registro"] = pd.to_datetime(
+            df_general["fecha_registro"],
+            errors="coerce"
+        )
+
+    # Puntaje
+    if "puntaje_riesgo" in df_general.columns:
+        df_general["puntaje_riesgo"] = pd.to_numeric(
+            df_general["puntaje_riesgo"],
+            errors="coerce"
+        )
+
+    # Clasificación
+    if "clasificacion_riesgo" in df_general.columns:
+        df_general["clasificacion_riesgo"] = (
+            df_general["clasificacion_riesgo"]
+            .fillna("Sin evaluar")
+            .str.title()
+        )
+    else:
+        df_general["clasificacion_riesgo"] = "Sin evaluar"
+
+    # Valores por defecto
+    for columna in [
+        "ciudad",
+        "nivel_educativo",
+        "genero"
+    ]:
+        if columna in df_general.columns:
+            df_general[columna] = (
+                df_general[columna]
+                .fillna("Sin registrar")
+            )
+
+    return df_general
 
 
 # =========================
@@ -208,26 +267,17 @@ try:
         "id, rol"
     )
 
-    encuestas = consultar_tabla(
-        "encuestas",
-        "id_encuesta, id_participante, fecha_aplicacion, estado"
-    )
-
-    resultados = consultar_tabla(
-        "resultados_riesgo",
+    respuestas_ciberseguridad = consultar_tabla(
+        "respuestas_encuesta_ciberseguridad",
         (
-            "id_resultado, id_encuesta, puntaje_riesgo, "
-            "clasificacion_riesgo, observacion, fecha_calculo"
-        )
-    )
-
-    respuestas = consultar_tabla(
-        "respuestas_encuesta",
-        (
-            "id_respuesta, id_encuesta, usa_misma_contrasena, "
-            "usa_wifi_publico, reconoce_phishing, usa_doble_factor, "
-            "tiene_antivirus, actualiza_contrasenas, "
-            "comparte_info_redes, nivel_conocimiento"
+            "id_respuesta, id_usuario, fecha_respuesta, usa_nube, "
+            "plataforma_nube, contenido_nube, nivel_conocimiento, "
+            "manejo_ciberseguridad, frecuencia_info_seguridad, "
+            "reconoce_phishing, identifica_herramientas_seguridad, "
+            "estado_antivirus, tipo_conexion, estabilidad_conexion, "
+            "frecuencia_fallas_internet, cambio_contrasenas_anual, "
+            "reutiliza_contrasenas, importancia_actualizar_contrasenas, "
+            "puntaje_riesgo, clasificacion_riesgo, observacion"
         )
     )
 
@@ -252,95 +302,11 @@ except Exception as error:
     st.stop()
 
 
-# =========================
-# PREPARAR DATAFRAMES
-# =========================
-
-df_participantes = pd.DataFrame(participantes)
-df_perfiles = pd.DataFrame(perfiles)
-df_encuestas = pd.DataFrame(encuestas)
-df_resultados = pd.DataFrame(resultados)
-df_respuestas = pd.DataFrame(respuestas)
-
-
-# Excluir administradores del reporte de participantes
-if not df_participantes.empty and not df_perfiles.empty:
-
-    df_participantes = df_participantes.merge(
-        df_perfiles,
-        left_on="id_usuario",
-        right_on="id",
-        how="left"
-    )
-
-    df_participantes = df_participantes[
-        df_participantes["rol"] == "usuario"
-    ].copy()
-
-
-# Crear un DataFrame general
-if df_participantes.empty:
-
-    df_general = pd.DataFrame()
-
-else:
-    df_general = df_participantes.copy()
-
-    if not df_encuestas.empty:
-        df_general = df_general.merge(
-            df_encuestas,
-            on="id_participante",
-            how="left"
-        )
-
-    if (
-        not df_resultados.empty
-        and "id_encuesta" in df_general.columns
-    ):
-        df_general = df_general.merge(
-            df_resultados,
-            on="id_encuesta",
-            how="left"
-        )
-
-    if (
-        not df_respuestas.empty
-        and "id_encuesta" in df_general.columns
-    ):
-        df_general = df_general.merge(
-            df_respuestas,
-            on="id_encuesta",
-            how="left"
-        )
-
-
-# Preparar columnas para filtros
-if not df_general.empty:
-
-    if "fecha_aplicacion" in df_general.columns:
-        df_general["fecha_aplicacion"] = pd.to_datetime(
-            df_general["fecha_aplicacion"],
-            errors="coerce"
-        )
-
-    if "clasificacion_riesgo" in df_general.columns:
-        df_general["clasificacion_riesgo"] = (
-            df_general["clasificacion_riesgo"]
-            .fillna("Sin evaluar")
-            .str.title()
-        )
-
-    if "ciudad" in df_general.columns:
-        df_general["ciudad"] = (
-            df_general["ciudad"]
-            .fillna("Sin registrar")
-        )
-
-    if "nivel_educativo" in df_general.columns:
-        df_general["nivel_educativo"] = (
-            df_general["nivel_educativo"]
-            .fillna("Sin registrar")
-        )
+df_general = preparar_dataframe_general(
+    participantes,
+    perfiles,
+    respuestas_ciberseguridad
+)
 
 
 # =========================
@@ -367,11 +333,12 @@ with st.sidebar:
             "📝 Encuestas",
             "⚠️ Riesgo",
             "🧹 Limpieza de datos",
+            "📥 Importar datos históricos",
             "💾 Respaldo y recuperación",
             "📄 Reportes",
             "⚙️ Administración"
         ],
-        index=6,
+        index=7,
         label_visibility="collapsed"
     )
 
@@ -404,11 +371,15 @@ elif menu == "⚠️ Riesgo":
 elif menu == "🧹 Limpieza de datos":
     st.switch_page("pages/limpieza.py")
 
+elif menu == "📥 Importar datos históricos":
+    st.switch_page("pages/importar_datos.py")
+
 elif menu == "💾 Respaldo y recuperación":
     st.switch_page("pages/respaldo.py")
-    
+
 elif menu == "⚙️ Administración":
     st.switch_page("pages/administracion.py")
+
 
 # =========================
 # ENCABEZADO
@@ -419,8 +390,8 @@ st.markdown(
 <div class="page-heading">
 <h1>Reportes</h1>
 <p>
-Filtra la información almacenada y descarga reportes
-para apoyar el análisis de los hábitos digitales.
+Filtra la información almacenada y descarga reportes sobre participantes,
+encuestas de ciberseguridad, resultados de riesgo y hábitos digitales.
 </p>
 </div>
 """,
@@ -432,9 +403,72 @@ para apoyar el análisis de los hábitos digitales.
 # VALIDAR DATOS
 # =========================
 
-if df_participantes.empty:
+if df_general.empty:
     st.info("Todavía no hay participantes registrados.")
     st.stop()
+
+
+# =========================
+# MÉTRICAS GENERALES
+# =========================
+
+total_participantes = df_general["id_usuario"].nunique()
+
+total_evaluaciones = (
+    df_general["id_respuesta"]
+    .dropna()
+    .nunique()
+    if "id_respuesta" in df_general.columns
+    else 0
+)
+
+promedio_riesgo = (
+    round(
+        df_general["puntaje_riesgo"]
+        .dropna()
+        .mean(),
+        1
+    )
+    if "puntaje_riesgo" in df_general.columns
+    and not df_general["puntaje_riesgo"].dropna().empty
+    else 0
+)
+
+riesgo_alto = (
+    len(
+        df_general[
+            df_general["clasificacion_riesgo"] == "Alto"
+        ]
+    )
+    if "clasificacion_riesgo" in df_general.columns
+    else 0
+)
+
+col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+
+with col_m1:
+    st.metric(
+        "Participantes",
+        total_participantes
+    )
+
+with col_m2:
+    st.metric(
+        "Evaluaciones",
+        total_evaluaciones
+    )
+
+with col_m3:
+    st.metric(
+        "Promedio riesgo",
+        promedio_riesgo
+    )
+
+with col_m4:
+    st.metric(
+        "Riesgo alto",
+        riesgo_alto
+    )
 
 
 # =========================
@@ -449,7 +483,8 @@ tipo_reporte = st.selectbox(
         "Reporte general",
         "Participantes registrados",
         "Resultados de riesgo",
-        "Respuestas de encuestas"
+        "Respuestas de encuestas",
+        "Hábitos digitales"
     ]
 )
 
@@ -459,7 +494,7 @@ with filtro1:
     ciudades = [
         "Todas"
     ] + sorted(
-        df_participantes["ciudad"]
+        df_general["ciudad"]
         .dropna()
         .unique()
         .tolist()
@@ -474,7 +509,7 @@ with filtro2:
     niveles_educativos = [
         "Todos"
     ] + sorted(
-        df_participantes["nivel_educativo"]
+        df_general["nivel_educativo"]
         .dropna()
         .unique()
         .tolist()
@@ -487,12 +522,13 @@ with filtro2:
 
 with filtro3:
     niveles_riesgo = [
-        "Todos",
-        "Sin evaluar",
-        "Bajo",
-        "Medio",
-        "Alto"
-    ]
+        "Todos"
+    ] + sorted(
+        df_general["clasificacion_riesgo"]
+        .dropna()
+        .unique()
+        .tolist()
+    )
 
     riesgo_seleccionado = st.selectbox(
         "Nivel de riesgo",
@@ -502,14 +538,13 @@ with filtro3:
 with filtro4:
 
     if (
-        not df_general.empty
-        and "fecha_aplicacion" in df_general.columns
-        and not df_general["fecha_aplicacion"]
+        "fecha_respuesta" in df_general.columns
+        and not df_general["fecha_respuesta"]
         .dropna()
         .empty
     ):
         fechas_disponibles = (
-            df_general["fecha_aplicacion"]
+            df_general["fecha_respuesta"]
             .dropna()
             .dt.date
         )
@@ -536,55 +571,49 @@ with filtro4:
 
 df_filtrado = df_general.copy()
 
-if not df_filtrado.empty:
+if ciudad_seleccionada != "Todas":
+    df_filtrado = df_filtrado[
+        df_filtrado["ciudad"]
+        == ciudad_seleccionada
+    ]
 
-    if ciudad_seleccionada != "Todas":
-        df_filtrado = df_filtrado[
-            df_filtrado["ciudad"]
-            == ciudad_seleccionada
-        ]
+if nivel_educativo_seleccionado != "Todos":
+    df_filtrado = df_filtrado[
+        df_filtrado["nivel_educativo"]
+        == nivel_educativo_seleccionado
+    ]
 
-    if nivel_educativo_seleccionado != "Todos":
-        df_filtrado = df_filtrado[
-            df_filtrado["nivel_educativo"]
-            == nivel_educativo_seleccionado
-        ]
+if riesgo_seleccionado != "Todos":
+    df_filtrado = df_filtrado[
+        df_filtrado["clasificacion_riesgo"]
+        == riesgo_seleccionado
+    ]
 
-    if (
-        riesgo_seleccionado != "Todos"
-        and "clasificacion_riesgo"
-        in df_filtrado.columns
-    ):
-        df_filtrado = df_filtrado[
-            df_filtrado["clasificacion_riesgo"]
-            == riesgo_seleccionado
-        ]
+if (
+    isinstance(rango_fechas, tuple)
+    and len(rango_fechas) == 2
+    and "fecha_respuesta" in df_filtrado.columns
+):
+    fecha_desde, fecha_hasta = rango_fechas
 
-    if (
-        isinstance(rango_fechas, tuple)
-        and len(rango_fechas) == 2
-        and "fecha_aplicacion" in df_filtrado.columns
-    ):
-        fecha_desde, fecha_hasta = rango_fechas
+    filas_sin_encuesta = (
+        df_filtrado["fecha_respuesta"]
+        .isna()
+    )
 
-        filas_sin_encuesta = (
-            df_filtrado["fecha_aplicacion"]
-            .isna()
+    filas_en_rango = (
+        df_filtrado["fecha_respuesta"]
+        .dt.date
+        .between(
+            fecha_desde,
+            fecha_hasta
         )
+    )
 
-        filas_en_rango = (
-            df_filtrado["fecha_aplicacion"]
-            .dt.date
-            .between(
-                fecha_desde,
-                fecha_hasta
-            )
-        )
-
-        df_filtrado = df_filtrado[
-            filas_sin_encuesta
-            | filas_en_rango
-        ]
+    df_filtrado = df_filtrado[
+        filas_sin_encuesta
+        | filas_en_rango
+    ]
 
 
 # =========================
@@ -608,7 +637,7 @@ elif tipo_reporte == "Resultados de riesgo":
         "nombre_completo",
         "ciudad",
         "nivel_educativo",
-        "fecha_aplicacion",
+        "fecha_respuesta",
         "puntaje_riesgo",
         "clasificacion_riesgo",
         "observacion"
@@ -619,15 +648,38 @@ elif tipo_reporte == "Respuestas de encuestas":
     columnas_reporte = [
         "nombre_completo",
         "ciudad",
-        "fecha_aplicacion",
-        "usa_misma_contrasena",
-        "usa_wifi_publico",
+        "nivel_educativo",
+        "fecha_respuesta",
+        "usa_nube",
+        "plataforma_nube",
+        "contenido_nube",
+        "nivel_conocimiento",
+        "manejo_ciberseguridad",
+        "frecuencia_info_seguridad",
         "reconoce_phishing",
-        "usa_doble_factor",
-        "tiene_antivirus",
-        "actualiza_contrasenas",
-        "comparte_info_redes",
-        "nivel_conocimiento"
+        "identifica_herramientas_seguridad",
+        "estado_antivirus",
+        "tipo_conexion",
+        "estabilidad_conexion",
+        "frecuencia_fallas_internet",
+        "cambio_contrasenas_anual",
+        "reutiliza_contrasenas",
+        "importancia_actualizar_contrasenas"
+    ]
+
+elif tipo_reporte == "Hábitos digitales":
+
+    columnas_reporte = [
+        "nombre_completo",
+        "nivel_conocimiento",
+        "reconoce_phishing",
+        "estado_antivirus",
+        "cambio_contrasenas_anual",
+        "reutiliza_contrasenas",
+        "frecuencia_info_seguridad",
+        "tipo_conexion",
+        "puntaje_riesgo",
+        "clasificacion_riesgo"
     ]
 
 else:
@@ -638,15 +690,19 @@ else:
         "genero",
         "ciudad",
         "nivel_educativo",
-        "fecha_aplicacion",
-        "estado",
+        "fecha_registro",
+        "fecha_respuesta",
+        "usa_nube",
+        "nivel_conocimiento",
+        "reconoce_phishing",
+        "estado_antivirus",
+        "reutiliza_contrasenas",
         "puntaje_riesgo",
         "clasificacion_riesgo",
         "observacion"
     ]
 
 
-# Mostrar solamente las columnas disponibles
 columnas_disponibles = [
     columna
     for columna in columnas_reporte
@@ -657,8 +713,39 @@ df_reporte = df_filtrado[
     columnas_disponibles
 ].copy()
 
-df_reporte = convertir_booleanos(
-    df_reporte
+
+# =========================
+# RENOMBRAR COLUMNAS
+# =========================
+
+df_reporte = df_reporte.rename(
+    columns={
+        "nombre_completo": "Participante",
+        "edad": "Edad",
+        "genero": "Género",
+        "ciudad": "Ciudad",
+        "nivel_educativo": "Nivel educativo",
+        "fecha_registro": "Fecha de registro",
+        "fecha_respuesta": "Fecha de respuesta",
+        "usa_nube": "Usa nube",
+        "plataforma_nube": "Plataforma de nube",
+        "contenido_nube": "Contenido en nube",
+        "nivel_conocimiento": "Nivel de conocimiento",
+        "manejo_ciberseguridad": "Manejo de ciberseguridad",
+        "frecuencia_info_seguridad": "Frecuencia de información de seguridad",
+        "reconoce_phishing": "Reconoce phishing",
+        "identifica_herramientas_seguridad": "Identifica herramientas de seguridad",
+        "estado_antivirus": "Estado del antivirus",
+        "tipo_conexion": "Tipo de conexión",
+        "estabilidad_conexion": "Estabilidad de conexión",
+        "frecuencia_fallas_internet": "Frecuencia de fallas de internet",
+        "cambio_contrasenas_anual": "Cambio de contraseñas anual",
+        "reutiliza_contrasenas": "Reutiliza contraseñas",
+        "importancia_actualizar_contrasenas": "Importancia de actualizar contraseñas",
+        "puntaje_riesgo": "Puntaje de riesgo",
+        "clasificacion_riesgo": "Clasificación de riesgo",
+        "observacion": "Observación"
+    }
 )
 
 
