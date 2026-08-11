@@ -1,0 +1,1104 @@
+/* =========================================================
+   CYBERLEY - AUTENTICACIÓN
+   Login + Registro
+========================================================= */
+
+.authPage {
+  min-height: 100vh;
+  width: 100%;
+
+  display: grid;
+  grid-template-columns:
+    minmax(420px, 1.05fr)
+    minmax(460px, 0.95fr);
+
+  background: var(--color-background);
+
+  overflow-x: hidden;
+}
+
+
+/* =========================================================
+   BOTÓN DE TEMA
+========================================================= */
+
+.authTheme {
+  position: fixed;
+
+  top: 22px;
+  right: 24px;
+
+  z-index: 50;
+}
+
+
+/* =========================================================
+   LADO VISUAL
+========================================================= */
+
+.authIntro {
+  position: relative;
+
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  justify-content: space-between;
+
+  overflow: hidden;
+
+  padding: 38px 54px 48px;
+
+  background:
+    radial-gradient(
+      circle at 15% 20%,
+      rgba(167, 139, 250, 0.2),
+      transparent 24rem
+    ),
+    radial-gradient(
+      circle at 90% 75%,
+      rgba(109, 40, 217, 0.22),
+      transparent 25rem
+    ),
+    linear-gradient(
+      145deg,
+      #2e1065 0%,
+      #4c1d95 44%,
+      #6d28d9 100%
+    );
+
+  color: white;
+}
+
+
+/* BRAND */
+
+.authBrand {
+  position: relative;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 12px;
+
+  z-index: 3;
+}
+
+.authLogo {
+  width: 48px;
+  height: 48px;
+
+  object-fit: contain;
+
+  border-radius: 13px;
+
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.15)
+    );
+}
+
+.authBrand span {
+  color: white;
+
+  font-size: 1.15rem;
+  font-weight: 850;
+
+  letter-spacing: -0.02em;
+}
+
+
+/* HERO */
+
+.authHeroContent {
+  position: relative;
+
+  max-width: 630px;
+
+  margin:
+    auto 0;
+
+  padding:
+    70px 0;
+
+  z-index: 3;
+}
+
+.authBadge {
+  width: fit-content;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 8px;
+
+  padding:
+    8px 12px;
+
+  margin-bottom: 20px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.2);
+
+  border-radius: 999px;
+
+  background:
+    rgba(255, 255, 255, 0.09);
+
+  color:
+    rgba(255, 255, 255, 0.92);
+
+  font-size: 0.76rem;
+  font-weight: 700;
+
+  backdrop-filter: blur(14px);
+}
+
+.authBadge svg {
+  font-size: 0.95rem;
+}
+
+.authHeroContent h1 {
+  max-width: 600px;
+
+  margin:
+    0;
+
+  color: white;
+
+  font-size:
+    clamp(
+      2.35rem,
+      4vw,
+      4.3rem
+    );
+
+  line-height: 1.03;
+
+  letter-spacing:
+    -0.045em;
+}
+
+.authHeroContent h1 span {
+  color:
+    #ddd6fe;
+}
+
+.authHeroContent p {
+  max-width: 560px;
+
+  margin:
+    22px 0 0;
+
+  color:
+    rgba(255, 255, 255, 0.78);
+
+  font-size: 0.98rem;
+
+  line-height: 1.75;
+}
+
+
+/* DECORACIONES */
+
+.authDecoration {
+  position: absolute;
+
+  border-radius: 50%;
+
+  pointer-events: none;
+
+  filter: blur(2px);
+}
+
+.authDecorationOne {
+  width: 310px;
+  height: 310px;
+
+  top: -110px;
+  right: -100px;
+
+  background:
+    rgba(255, 255, 255, 0.08);
+}
+
+.authDecorationTwo {
+  width: 210px;
+  height: 210px;
+
+  left: -80px;
+  bottom: -80px;
+
+  background:
+    rgba(196, 181, 253, 0.13);
+}
+
+
+/* =========================================================
+   FORMULARIO
+========================================================= */
+
+.authFormArea {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding:
+    88px 52px 52px;
+
+  background:
+    var(--color-background);
+}
+
+.authCard {
+  width: 100%;
+  max-width: 470px;
+
+  padding:
+    34px;
+
+  border:
+    1px solid
+    var(--color-border);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-surface) 97%,
+      transparent
+    );
+
+  box-shadow:
+    var(--shadow-md);
+
+  animation:
+    authCardEnter
+    420ms ease both;
+}
+
+.authCardLarge {
+  max-width: 560px;
+}
+
+
+/* HEADER FORM */
+
+.authCardHeader {
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color:
+    var(--color-primary);
+
+  font-size: 0.72rem;
+  font-weight: 850;
+
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.authCardHeader h2 {
+  margin: 0;
+
+  color:
+    var(--color-text);
+
+  font-size:
+    clamp(
+      1.65rem,
+      3vw,
+      2rem
+    );
+
+  letter-spacing: -0.03em;
+}
+
+.authCardHeader p {
+  margin:
+    7px 0 0;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size: 0.86rem;
+
+  line-height: 1.55;
+}
+
+
+/* =========================================================
+   CAMPOS
+========================================================= */
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+
+  margin-bottom: 18px;
+}
+
+.fieldGroup label {
+  color:
+    var(--color-text);
+
+  font-size: 0.79rem;
+  font-weight: 720;
+}
+
+.inputWrapper {
+  min-height: 48px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding:
+    0 14px;
+
+  border:
+    1px solid
+    var(--color-border);
+
+  border-radius:
+    13px;
+
+  background:
+    var(--color-surface);
+
+  transition:
+    border-color
+    var(--transition-fast),
+    box-shadow
+    var(--transition-fast),
+    background
+    var(--transition-fast);
+}
+
+.inputWrapper > svg {
+  flex: 0 0 auto;
+
+  color:
+    var(--color-muted);
+
+  font-size: 1rem;
+}
+
+.inputWrapper:focus-within {
+  border-color:
+    var(--color-primary);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(109, 40, 217, 0.11);
+}
+
+.inputWrapper input,
+.inputWrapper select {
+  width: 100%;
+
+  min-width: 0;
+
+  border: 0;
+  outline: 0;
+
+  background:
+    transparent;
+
+  color:
+    var(--color-text);
+
+  font-size: 0.86rem;
+}
+
+.inputWrapper input {
+  height: 46px;
+}
+
+.inputWrapper select {
+  height: 46px;
+
+  cursor: pointer;
+}
+
+
+/* INPUT SIN ICONO */
+
+.standaloneInput {
+  width: 100%;
+
+  min-height: 48px;
+
+  padding:
+    0 14px;
+
+  border:
+    1px solid
+    var(--color-border);
+
+  border-radius:
+    13px;
+
+  outline: 0;
+
+  background:
+    var(--color-surface);
+
+  color:
+    var(--color-text);
+
+  font-size: 0.86rem;
+
+  transition:
+    border-color
+    var(--transition-fast),
+    box-shadow
+    var(--transition-fast);
+}
+
+.standaloneInput:focus {
+  border-color:
+    var(--color-primary);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(109, 40, 217, 0.11);
+}
+
+.standaloneInput:disabled {
+  opacity: 0.55;
+
+  cursor: not-allowed;
+}
+
+
+/* PLACEHOLDERS */
+
+.inputWrapper input::placeholder,
+.standaloneInput::placeholder {
+  color:
+    var(--color-muted);
+}
+
+
+/* PASSWORD */
+
+.passwordToggle {
+  width: 34px;
+  height: 34px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  border: 0;
+  border-radius: 9px;
+
+  background:
+    transparent;
+
+  color:
+    var(--color-muted);
+
+  transition:
+    background
+    var(--transition-fast),
+    color
+    var(--transition-fast);
+}
+
+.passwordToggle:hover {
+  background:
+    var(--color-primary-soft);
+
+  color:
+    var(--color-primary);
+}
+
+
+/* =========================================================
+   ERRORES
+========================================================= */
+
+.inputError {
+  border-color:
+    var(--color-danger) !important;
+}
+
+.inputError:focus,
+.inputError:focus-within {
+  box-shadow:
+    0 0 0 3px
+    rgba(180, 35, 61, 0.1) !important;
+}
+
+.fieldError {
+  color:
+    var(--color-danger);
+
+  font-size:
+    0.7rem;
+
+  line-height:
+    1.4;
+}
+
+.fieldHint {
+  color:
+    var(--color-muted);
+
+  font-size:
+    0.68rem;
+}
+
+.formAlert {
+  margin-bottom:
+    18px;
+
+  padding:
+    12px 14px;
+
+  border-radius:
+    12px;
+
+  font-size:
+    0.76rem;
+
+  line-height:
+    1.5;
+}
+
+.formAlert.error {
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--color-danger) 25%,
+      transparent
+    );
+
+  background:
+    var(--color-danger-soft);
+
+  color:
+    var(--color-danger);
+}
+
+
+/* =========================================================
+   CONTRASEÑA SEGURA
+========================================================= */
+
+.passwordRequirements {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap:
+    7px 10px;
+
+  margin-top:
+    4px;
+
+  padding:
+    11px 12px;
+
+  border:
+    1px solid
+    var(--color-border);
+
+  border-radius:
+    11px;
+
+  background:
+    var(--color-surface-secondary);
+}
+
+.passwordRequirements > span {
+  grid-column:
+    1 / -1;
+
+  margin-bottom:
+    2px;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    0.68rem;
+  font-weight:
+    700;
+}
+
+.passwordRequirement {
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  color:
+    var(--color-muted);
+
+  font-size:
+    0.66rem;
+
+  transition:
+    color
+    var(--transition-fast);
+}
+
+.passwordRequirement svg {
+  flex:
+    0 0 auto;
+}
+
+.passwordRequirement.completed {
+  color:
+    var(--color-success);
+}
+
+
+/* =========================================================
+   BOTONES
+========================================================= */
+
+.primaryButton,
+.secondaryButton {
+  width: 100%;
+
+  min-height: 48px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  border-radius:
+    13px;
+
+  font-size:
+    0.84rem;
+  font-weight:
+    780;
+
+  text-decoration:
+    none;
+
+  transition:
+    transform
+    var(--transition-fast),
+    box-shadow
+    var(--transition-fast),
+    background
+    var(--transition-fast);
+}
+
+.primaryButton {
+  border: 0;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--color-primary),
+      var(--color-primary-dark)
+    );
+
+  color: white;
+
+  box-shadow:
+    0 12px 28px
+    rgba(109, 40, 217, 0.18);
+}
+
+.primaryButton:hover:not(:disabled) {
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 16px 34px
+    rgba(109, 40, 217, 0.26);
+}
+
+.primaryButton:active:not(:disabled) {
+  transform:
+    translateY(0);
+}
+
+.primaryButton:disabled {
+  opacity:
+    0.62;
+
+  cursor:
+    not-allowed;
+}
+
+.secondaryButton {
+  border:
+    1px solid
+    var(--color-border);
+
+  background:
+    var(--color-surface);
+
+  color:
+    var(--color-text);
+}
+
+.secondaryButton:hover {
+  border-color:
+    var(--color-primary);
+
+  background:
+    var(--color-primary-soft);
+
+  color:
+    var(--color-primary);
+
+  transform:
+    translateY(-1px);
+}
+
+
+/* LOADING */
+
+.buttonSpinner {
+  width: 16px;
+  height: 16px;
+
+  border:
+    2px solid
+    rgba(255, 255, 255, 0.35);
+
+  border-top-color:
+    white;
+
+  border-radius:
+    50%;
+
+  animation:
+    authSpin
+    650ms linear infinite;
+}
+
+
+/* =========================================================
+   DIVISOR / FOOTER
+========================================================= */
+
+.authDivider {
+  display: grid;
+
+  grid-template-columns:
+    1fr auto 1fr;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin:
+    22px 0 14px;
+}
+
+.authDivider > span {
+  height: 1px;
+
+  background:
+    var(--color-border);
+}
+
+.authDivider p {
+  margin: 0;
+
+  color:
+    var(--color-muted);
+
+  font-size:
+    0.7rem;
+}
+
+.authFooterText {
+  margin:
+    20px 0 0;
+
+  text-align:
+    center;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    0.76rem;
+}
+
+.authFooterText a {
+  color:
+    var(--color-primary);
+
+  font-weight:
+    780;
+
+  text-decoration:
+    none;
+}
+
+.authFooterText a:hover {
+  text-decoration:
+    underline;
+}
+
+
+/* =========================================================
+   ANIMACIONES
+========================================================= */
+
+@keyframes authCardEnter {
+  from {
+    opacity: 0;
+    transform:
+      translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translateY(0);
+  }
+}
+
+@keyframes authSpin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+
+/* =========================================================
+   MODO OSCURO
+========================================================= */
+
+[data-theme="dark"]
+.authFormArea {
+  background:
+    radial-gradient(
+      circle at 70% 15%,
+      rgba(109, 40, 217, 0.07),
+      transparent 20rem
+    ),
+    var(--color-background);
+}
+
+[data-theme="dark"]
+.authCard {
+  background:
+    color-mix(
+      in srgb,
+      var(--color-surface) 97%,
+      transparent
+    );
+
+  box-shadow:
+    0 24px 70px
+    rgba(0, 0, 0, 0.25);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1100px) {
+  .authPage {
+    grid-template-columns:
+      minmax(350px, 0.85fr)
+      minmax(430px, 1.15fr);
+  }
+
+  .authIntro {
+    padding:
+      34px 38px;
+  }
+
+  .authHeroContent h1 {
+    font-size:
+      clamp(
+        2.2rem,
+        4.3vw,
+        3.4rem
+      );
+  }
+
+  .authFormArea {
+    padding:
+      80px 34px 40px;
+  }
+}
+
+
+@media (max-width: 850px) {
+  .authPage {
+    display: block;
+
+    min-height:
+      100vh;
+  }
+
+  .authIntro {
+    min-height:
+      auto;
+
+    padding:
+      30px 26px 54px;
+
+    border-radius:
+      0 0 32px 32px;
+  }
+
+  .authHeroContent {
+    padding:
+      56px 0 10px;
+  }
+
+  .authHeroContent h1 {
+    max-width:
+      650px;
+
+    font-size:
+      clamp(
+        2rem,
+        8vw,
+        3rem
+      );
+  }
+
+  .authHeroContent p {
+    max-width:
+      650px;
+  }
+
+  .authDecorationOne {
+    width:
+      220px;
+
+    height:
+      220px;
+  }
+
+  .authFormArea {
+    min-height:
+      auto;
+
+    padding:
+      34px 20px 48px;
+  }
+
+  .authCard,
+  .authCardLarge {
+    max-width:
+      620px;
+  }
+}
+
+
+@media (max-width: 560px) {
+  .authTheme {
+    top:
+      16px;
+
+    right:
+      16px;
+  }
+
+  .authIntro {
+    padding:
+      24px 20px 42px;
+
+    border-radius:
+      0 0 24px 24px;
+  }
+
+  .authBrand span {
+    font-size:
+      1rem;
+  }
+
+  .authLogo {
+    width:
+      42px;
+
+    height:
+      42px;
+  }
+
+  .authHeroContent {
+    padding:
+      46px 0 8px;
+  }
+
+  .authHeroContent h1 {
+    font-size:
+      2rem;
+
+    line-height:
+      1.09;
+  }
+
+  .authHeroContent p {
+    font-size:
+      0.85rem;
+  }
+
+  .authBadge {
+    font-size:
+      0.67rem;
+  }
+
+  .authFormArea {
+    padding:
+      26px 14px 42px;
+  }
+
+  .authCard {
+    padding:
+      24px 20px;
+
+    border-radius:
+      18px;
+  }
+
+  .passwordRequirements {
+    grid-template-columns:
+      1fr;
+  }
+}
+
+
+@media (max-width: 380px) {
+  .authCard {
+    padding:
+      22px 16px;
+  }
+
+  .authHeroContent h1 {
+    font-size:
+      1.75rem;
+  }
+}
