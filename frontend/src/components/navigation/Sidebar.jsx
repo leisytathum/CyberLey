@@ -1,0 +1,5 @@
+import { NavLink } from 'react-router-dom'
+import { FiHome,FiUsers,FiClipboard,FiShield,FiBarChart2,FiUpload,FiTrash2,FiArchive,FiSettings,FiLogOut } from 'react-icons/fi'
+import { useAuth } from '../../context/AuthContext'
+const links=[['/admin','Inicio',FiHome],['/admin/participantes','Participantes',FiUsers],['/admin/encuestas','Encuestas',FiClipboard],['/admin/riesgo','Riesgo',FiShield],['/admin/reportes','Reportes',FiBarChart2],['/admin/importar','Importar datos',FiUpload],['/admin/limpieza','Limpieza',FiTrash2],['/admin/respaldos','Respaldos',FiArchive],['/admin/administracion','Administración',FiSettings]]
+export default function Sidebar(){const {profile,signOut}=useAuth();return <aside className="sidebar"><div className="brand"><strong>CyberLey</strong><small>Administración</small></div><nav>{links.map(([to,label,Icon])=><NavLink end={to==='/admin'} key={to} to={to}><Icon/>{label}</NavLink>)}</nav><div className="sidebarBottom"><span>{profile?.nombre_completo||'Administrador'}</span><button onClick={signOut}><FiLogOut/>Cerrar sesión</button></div></aside>}

@@ -1,5 +1,26 @@
+# Secrets
 .env
-__pycache__/
-*.pyc
+.env.*
+!.env.example
+frontend/.env
+backend/.env
+
+# JS
+frontend/node_modules/
+frontend/dist/
+node_modules/
+
+# Python
+backend/venv/
+backend/.venv/
 .venv/
-venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

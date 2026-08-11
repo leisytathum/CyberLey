@@ -1,0 +1,1 @@
+import { Outlet } from 'react-router-dom'; import Sidebar from '../components/navigation/Sidebar'; export default function AdminLayout(){return <div className="appShell"><Sidebar/><main className="mainContent"><Outlet/></main></div>}
