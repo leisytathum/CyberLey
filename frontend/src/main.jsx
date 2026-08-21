@@ -8,6 +8,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 
 import "./styles/global.css";
 import "./styles/auth.css";
+import "./styles/user.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

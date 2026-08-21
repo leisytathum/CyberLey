@@ -749,3 +749,369 @@
     gap: 6px;
   }
 }
+/* =========================================================
+   ENCUESTA USUARIO
+========================================================= */
+
+.surveyForm {
+  display: grid;
+  gap: 24px;
+}
+
+.surveySection {
+  padding-bottom: 24px;
+
+  border-bottom:
+    1px solid var(--color-border);
+}
+
+.surveySection:last-of-type {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.surveySectionHeader {
+  margin-bottom: 20px;
+}
+
+.surveySectionHeader h2 {
+  margin:
+    5px 0
+    7px;
+
+  font-size: 1.1rem;
+
+  color:
+    var(--color-text);
+}
+
+.surveySectionHeader p {
+  margin: 0;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size: 0.82rem;
+}
+
+.surveyFieldsGrid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 18px;
+}
+
+.surveyField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.surveyFieldFull {
+  grid-column:
+    1 / -1;
+}
+
+.surveyField label {
+  color:
+    var(--color-text);
+
+  font-size:
+    0.78rem;
+
+  font-weight:
+    600;
+}
+
+.surveyField select,
+.surveyField input {
+  width: 100%;
+  height: 43px;
+
+  padding:
+    0 12px;
+
+  border:
+    1px solid
+    var(--color-border);
+
+  border-radius:
+    10px;
+
+  background:
+    var(--color-surface);
+
+  color:
+    var(--color-text);
+
+  outline:
+    none;
+
+  transition:
+    border-color
+      var(--transition-fast),
+    box-shadow
+      var(--transition-fast);
+}
+
+.surveyField select:focus,
+.surveyField input:focus {
+  border-color:
+    var(--color-primary);
+
+  box-shadow:
+    0 0 0 3px
+    var(
+      --color-primary-soft
+    );
+}
+
+.surveyActions {
+  display: flex;
+
+  justify-content:
+    flex-end;
+
+  padding-top:
+    10px;
+}
+
+.surveySubmit {
+  min-width:
+    180px;
+
+  min-height:
+    44px;
+
+  border:
+    none;
+
+  border-radius:
+    11px;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--color-primary),
+      var(
+        --color-primary-dark
+      )
+    );
+
+  color:
+    white;
+
+  font-weight:
+    700;
+
+  box-shadow:
+    0 8px 22px
+    rgba(
+      109,
+      40,
+      217,
+      0.2
+    );
+}
+
+.surveySubmit:hover {
+  transform:
+    translateY(-1px);
+}
+
+@media (
+  max-width: 720px
+) {
+  .surveyFieldsGrid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .surveyFieldFull {
+    grid-column:
+      auto;
+  }
+}
+/* =========================================================
+   RESULTADO DE ENCUESTA
+========================================================= */
+
+.surveyResultPanel {
+  display: grid;
+  gap: 24px;
+}
+
+.surveyResultTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.surveyResultTitle {
+  margin: 8px 0 10px;
+  font-size: 1.9rem;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+}
+
+.surveyResultSubtitle {
+  margin: 0;
+  max-width: 760px;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+.surveyResultCards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.surveyMetricCard {
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.surveyMetricCardAccent {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-soft),
+    var(--color-surface)
+  );
+}
+
+.surveyMetricCardAccent.riskLow {
+  background: linear-gradient(
+    135deg,
+    var(--color-success-soft),
+    var(--color-surface)
+  );
+}
+
+.surveyMetricCardAccent.riskMedium {
+  background: linear-gradient(
+    135deg,
+    var(--color-warning-soft),
+    var(--color-surface)
+  );
+}
+
+.surveyMetricCardAccent.riskHigh {
+  background: linear-gradient(
+    135deg,
+    var(--color-danger-soft),
+    var(--color-surface)
+  );
+}
+
+.surveyMetricLabel {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.surveyMetricValue {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--color-text);
+}
+
+.surveyMetricRisk {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.surveyMetricHelper {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.surveyObservationCard,
+.surveyNextStepCard {
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.surveyObservationText {
+  margin: 12px 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+  font-size: 0.96rem;
+}
+
+.surveyNextStepCard h3 {
+  margin: 8px 0 8px;
+  color: var(--color-text);
+  font-size: 1.1rem;
+}
+
+.surveyNextStepCard p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  font-size: 0.9rem;
+}
+
+.surveyActionsBetween {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.surveySecondaryButton {
+  min-width: 160px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.surveySecondaryButton:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 720px) {
+  .surveyResultCards {
+    grid-template-columns: 1fr;
+  }
+
+  .surveyActionsBetween {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .surveySecondaryButton,
+  .surveySubmit {
+    width: 100%;
+  }
+}

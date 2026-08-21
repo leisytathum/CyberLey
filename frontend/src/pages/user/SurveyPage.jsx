@@ -1,4 +1,651 @@
-import {useState} from 'react';import {useNavigate} from 'react-router-dom';import api from '../../services/api';
-const initial={usa_nube:'Sí',plataforma_nube:'Google Drive',contenido_nube:'Documentos personales',nivel_conocimiento:'Medio',manejo_ciberseguridad:3,frecuencia_info_seguridad:'A veces',reconoce_phishing:'A veces',identifica_herramientas_seguridad:'A veces',estado_antivirus:'No sé',estabilidad_conexion:3,frecuencia_fallas_internet:'A veces',cambio_contrasenas_anual:'Una vez al año',reutiliza_contrasenas:'A veces',importancia_actualizar_contrasenas:3};
-function Select({label,name,value,onChange,options}){return <label>{label}<select name={name} value={value} onChange={onChange}>{options.map(x=><option key={x}>{x}</option>)}</select></label>};function Scale({label,name,value,onChange}){return <label>{label}<select name={name} value={value} onChange={onChange}>{[1,2,3,4,5].map(x=><option key={x} value={x}>{x}</option>)}</select></label>}
-export default function SurveyPage(){const nav=useNavigate();const [f,setF]=useState(initial),[error,setError]=useState(''),[loading,setLoading]=useState(false);const ch=e=>setF({...f,[e.target.name]:['manejo_ciberseguridad','estabilidad_conexion','importancia_actualizar_contrasenas'].includes(e.target.name)?Number(e.target.value):e.target.value});async function submit(e){e.preventDefault();setLoading(true);setError('');try{await api.post('/riesgo/evaluar',f);nav('/usuario')}catch(x){setError(x.message)}finally{setLoading(false)}}return <><div className="pageTitle"><div><span className="eyebrow">Evaluación CyberLey</span><h1>Encuesta de ciberseguridad</h1><p>Responde según tus hábitos actuales.</p></div></div><form className="panel surveyGrid" onSubmit={submit}><Select label="¿Utilizas almacenamiento en la nube?" name="usa_nube" value={f.usa_nube} onChange={ch} options={['Sí','No']}/>{f.usa_nube==='Sí'&&<><Select label="Plataforma principal" name="plataforma_nube" value={f.plataforma_nube} onChange={ch} options={['Google Drive','OneDrive','Dropbox','iCloud','Mega','Otra']}/><Select label="Contenido principal en la nube" name="contenido_nube" value={f.contenido_nube} onChange={ch} options={['Documentos personales','Fotos o videos','Archivos académicos','Archivos laborales','Contraseñas o información sensible','Otro']}/></>}<Select label="Nivel de conocimiento" name="nivel_conocimiento" value={f.nivel_conocimiento} onChange={ch} options={['Bajo','Medio','Alto']}/><Scale label="Manejo de ciberseguridad (1–5)" name="manejo_ciberseguridad" value={f.manejo_ciberseguridad} onChange={ch}/><Select label="Frecuencia con que buscas información de seguridad" name="frecuencia_info_seguridad" value={f.frecuencia_info_seguridad} onChange={ch} options={['Nunca','Rara vez','A veces','Frecuentemente']}/><Select label="¿Reconoces intentos de phishing?" name="reconoce_phishing" value={f.reconoce_phishing} onChange={ch} options={['No','A veces','Sí']}/><Select label="¿Identificas herramientas de seguridad?" name="identifica_herramientas_seguridad" value={f.identifica_herramientas_seguridad} onChange={ch} options={['No','A veces','Sí']}/><Select label="Estado del antivirus" name="estado_antivirus" value={f.estado_antivirus} onChange={ch} options={['No tengo antivirus','Tengo antivirus, pero no está actualizado','No sé','Tengo antivirus actualizado']}/><Select label="Tipo de conexión principal" name="tipo_conexion" value={f.tipo_conexion||'Wi-Fi'} onChange={ch} options={['Wi-Fi','Router','Datos móviles','Fibra óptica','ADSL','Satelital','Otro']}/><Scale label="Estabilidad de conexión (1–5)" name="estabilidad_conexion" value={f.estabilidad_conexion} onChange={ch}/><Select label="Frecuencia de fallas de internet" name="frecuencia_fallas_internet" value={f.frecuencia_fallas_internet} onChange={ch} options={['Nunca','Rara vez','A veces','Frecuentemente']}/><Select label="Cambio de contraseñas" name="cambio_contrasenas_anual" value={f.cambio_contrasenas_anual} onChange={ch} options={['Nunca','Una vez al año','Cada 6 meses','Cada 3 meses o menos']}/><Select label="¿Reutilizas contraseñas?" name="reutiliza_contrasenas" value={f.reutiliza_contrasenas} onChange={ch} options={['Sí','A veces','No']}/><Scale label="Importancia de actualizar contraseñas (1–5)" name="importancia_actualizar_contrasenas" value={f.importancia_actualizar_contrasenas} onChange={ch}/>{error&&<div className="errorBox full">{error}</div>}<button className="primary full" disabled={loading}>{loading?'Guardando…':'Calcular mi riesgo'}</button></form></>}
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import api from "../../services/api";
+
+const initialForm = {
+  usa_nube: "Sí",
+  plataforma_nube: "Google Drive",
+  contenido_nube: "Documentos personales",
+
+  nivel_conocimiento: "Medio",
+  manejo_ciberseguridad: 3,
+  frecuencia_info_seguridad: "A veces",
+  reconoce_phishing: "A veces",
+  identifica_herramientas_seguridad: "A veces",
+  estado_antivirus: "No sé",
+
+  tipo_conexion: "Wi-Fi",
+  estabilidad_conexion: 3,
+  frecuencia_fallas_internet: "A veces",
+
+  cambio_contrasenas_anual: "Una vez al año",
+  reutiliza_contrasenas: "A veces",
+  importancia_actualizar_contrasenas: 3,
+};
+
+function SelectField({
+  label,
+  name,
+  value,
+  onChange,
+  options,
+  full = false,
+}) {
+  return (
+    <div
+      className={`surveyField ${
+        full ? "surveyFieldFull" : ""
+      }`}
+    >
+      <label htmlFor={name}>
+        {label}
+      </label>
+
+      <select
+        id={name}
+        name={name}
+        value={value}
+        onChange={onChange}
+      >
+        {options.map((option) => (
+          <option
+            key={option}
+            value={option}
+          >
+            {option}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function ScaleField({
+  label,
+  name,
+  value,
+  onChange,
+  full = false,
+}) {
+  return (
+    <div
+      className={`surveyField ${
+        full ? "surveyFieldFull" : ""
+      }`}
+    >
+      <label htmlFor={name}>
+        {label}
+      </label>
+
+      <select
+        id={name}
+        name={name}
+        value={value}
+        onChange={onChange}
+      >
+        {[1, 2, 3, 4, 5].map(
+          (number) => (
+            <option
+              key={number}
+              value={number}
+            >
+              {number}
+            </option>
+          )
+        )}
+      </select>
+    </div>
+  );
+}
+
+export default function SurveyPage() {
+  const navigate = useNavigate();
+
+  const [form, setForm] =
+    useState(initialForm);
+
+  const [result, setResult] =
+    useState(null);
+
+  const [error, setError] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  function handleChange(event) {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    const numericFields = [
+      "manejo_ciberseguridad",
+      "estabilidad_conexion",
+      "importancia_actualizar_contrasenas",
+    ];
+
+    setForm((previous) => ({
+      ...previous,
+
+      [name]:
+        numericFields.includes(name)
+          ? Number(value)
+          : value,
+    }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response =
+        await api.post(
+          "/riesgo/evaluar",
+          form
+        );
+
+      setResult(response.data);
+    } catch (requestError) {
+      setError(
+        requestError.message ||
+          "No se pudo guardar la evaluación."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function resetSurvey() {
+    setForm(initialForm);
+    setResult(null);
+    setError("");
+  }
+
+  function getRiskClass(value) {
+    if (value === "alto") return "riskHigh";
+    if (value === "medio") return "riskMedium";
+    return "riskLow";
+  }
+
+  function getRiskLabel(value) {
+    if (value === "alto") return "Riesgo alto";
+    if (value === "medio") return "Riesgo medio";
+    return "Riesgo bajo";
+  }
+
+  if (result) {
+    const riskClass = getRiskClass(
+      result.clasificacion
+    );
+
+    return (
+      <section className="dashboardPanel surveyResultPanel">
+        <div className="surveyResultTop">
+          <div>
+            <span className="panelEyebrow">
+              EVALUACIÓN COMPLETADA
+            </span>
+
+            <h2 className="surveyResultTitle">
+              Tu resultado de seguridad digital
+            </h2>
+
+            <p className="surveyResultSubtitle">
+              Analizamos tus hábitos actuales
+              para estimar tu nivel de riesgo y
+              darte una recomendación clara.
+            </p>
+          </div>
+        </div>
+
+        <div className="surveyResultCards">
+          <article className="surveyMetricCard">
+            <span className="surveyMetricLabel">
+              Puntaje obtenido
+            </span>
+
+            <strong className="surveyMetricValue">
+              {result.puntaje}
+            </strong>
+
+            <small className="surveyMetricHelper">
+              puntos de riesgo
+            </small>
+          </article>
+
+          <article
+            className={`surveyMetricCard surveyMetricCardAccent ${riskClass}`}
+          >
+            <span className="surveyMetricLabel">
+              Clasificación
+            </span>
+
+            <strong className="surveyMetricRisk">
+              {getRiskLabel(
+                result.clasificacion
+              )}
+            </strong>
+
+            <small className="surveyMetricHelper">
+              según tus respuestas
+            </small>
+          </article>
+        </div>
+
+        <section className="surveyObservationCard">
+          <span className="panelEyebrow">
+            RECOMENDACIÓN
+          </span>
+
+          <p className="surveyObservationText">
+            {result.observacion}
+          </p>
+        </section>
+
+        <section className="surveyNextStepCard">
+          <div>
+            <span className="panelEyebrow">
+              SIGUIENTE PASO
+            </span>
+
+            <h3>
+              Sigue fortaleciendo tu seguridad
+              digital
+            </h3>
+
+            <p>
+              Puedes realizar una nueva
+              evaluación cuando quieras para
+              comparar cambios en tus hábitos y
+              revisar tu progreso.
+            </p>
+          </div>
+        </section>
+
+        <div className="surveyActions surveyActionsBetween">
+          <button
+            type="button"
+            className="surveySecondaryButton"
+            onClick={() => navigate("/usuario")}
+          >
+            Volver al inicio
+          </button>
+
+          <button
+            type="button"
+            className="surveySubmit"
+            onClick={resetSurvey}
+          >
+            Realizar otra evaluación
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <form
+      className="dashboardPanel surveyForm"
+      onSubmit={handleSubmit}
+    >
+      <section className="surveyIntro">
+        <span className="panelEyebrow">
+          EVALUACIÓN CYBERLEY
+        </span>
+
+        <h2>
+          Encuesta de hábitos digitales y
+          ciberseguridad
+        </h2>
+
+        <p>
+          Responde según tus hábitos actuales.
+          La información se utilizará para
+          calcular tu nivel de riesgo digital.
+        </p>
+      </section>
+
+      <section className="surveySection">
+        <div className="surveySectionHeader">
+          <span className="panelEyebrow">
+            SECCIÓN 1
+          </span>
+
+          <h2>
+            Uso de servicios digitales
+          </h2>
+
+          <p>
+            Cuéntanos cómo utilizas servicios
+            y plataformas de almacenamiento.
+          </p>
+        </div>
+
+        <div className="surveyFieldsGrid">
+          <SelectField
+            label="¿Utilizas almacenamiento en la nube?"
+            name="usa_nube"
+            value={form.usa_nube}
+            onChange={handleChange}
+            options={[
+              "Sí",
+              "No",
+            ]}
+          />
+
+          {form.usa_nube === "Sí" && (
+            <>
+              <SelectField
+                label="¿Qué plataforma utilizas principalmente?"
+                name="plataforma_nube"
+                value={
+                  form.plataforma_nube
+                }
+                onChange={
+                  handleChange
+                }
+                options={[
+                  "Google Drive",
+                  "OneDrive",
+                  "Dropbox",
+                  "iCloud",
+                  "Mega",
+                  "Otra",
+                ]}
+              />
+
+              <SelectField
+                label="¿Qué contenido guardas principalmente?"
+                name="contenido_nube"
+                value={
+                  form.contenido_nube
+                }
+                onChange={
+                  handleChange
+                }
+                options={[
+                  "Documentos personales",
+                  "Fotos o videos",
+                  "Archivos académicos",
+                  "Archivos laborales",
+                  "Contraseñas o información sensible",
+                  "Otro",
+                ]}
+                full
+              />
+            </>
+          )}
+        </div>
+      </section>
+
+      <section className="surveySection">
+        <div className="surveySectionHeader">
+          <span className="panelEyebrow">
+            SECCIÓN 2
+          </span>
+
+          <h2>
+            Conocimientos y seguridad
+          </h2>
+
+          <p>
+            Estas preguntas evalúan qué tan
+            familiarizado estás con prácticas
+            de ciberseguridad.
+          </p>
+        </div>
+
+        <div className="surveyFieldsGrid">
+          <SelectField
+            label="¿Cuál consideras que es tu nivel de conocimiento sobre ciberseguridad?"
+            name="nivel_conocimiento"
+            value={
+              form.nivel_conocimiento
+            }
+            onChange={
+              handleChange
+            }
+            options={[
+              "Bajo",
+              "Medio",
+              "Alto",
+            ]}
+          />
+
+          <ScaleField
+            label="¿Cómo calificas tu manejo de temas de ciberseguridad? (1–5)"
+            name="manejo_ciberseguridad"
+            value={
+              form.manejo_ciberseguridad
+            }
+            onChange={
+              handleChange
+            }
+          />
+
+          <SelectField
+            label="¿Con qué frecuencia buscas información sobre seguridad digital?"
+            name="frecuencia_info_seguridad"
+            value={
+              form.frecuencia_info_seguridad
+            }
+            onChange={
+              handleChange
+            }
+            options={[
+              "Nunca",
+              "Rara vez",
+              "A veces",
+              "Frecuentemente",
+            ]}
+          />
+
+          <SelectField
+            label="¿Reconoces intentos de phishing?"
+            name="reconoce_phishing"
+            value={
+              form.reconoce_phishing
+            }
+            onChange={
+              handleChange
+            }
+            options={[
+              "No",
+              "A veces",
+              "Sí",
+            ]}
+          />
+
+          <SelectField
+            label="¿Identificas herramientas de seguridad digital?"
+            name="identifica_herramientas_seguridad"
+            value={
+              form.identifica_herramientas_seguridad
+            }
+            onChange={
+              handleChange
+            }
+            options={[
+              "No",
+              "A veces",
+              "Sí",
+            ]}
+          />
+
+          <SelectField
+            label="¿Cuál es el estado de tu antivirus?"
+            name="estado_antivirus"
+            value={
+              form.estado_antivirus
+            }
+            onChange={
+              handleChange
+            }
+            options={[
+              "No tengo antivirus",
+              "Tengo antivirus, pero no está actualizado",
+              "No sé",
+              "Tengo antivirus actualizado",
+            ]}
+          />
+        </div>
+      </section>
+
+      <section className="surveySection">
+        <div className="surveySectionHeader">
+          <span className="panelEyebrow">
+            SECCIÓN 3
+          </span>
+
+          <h2>
+            Conexión a internet
+          </h2>
+
+          <p>
+            Cuéntanos cómo es tu conexión y qué
+            tan estable suele ser.
+          </p>
+        </div>
+
+        <div className="surveyFieldsGrid">
+          <SelectField
+            label="¿Cuál es tu tipo de conexión principal?"
+            name="tipo_conexion"
+            value={
+              form.tipo_conexion
+            }
+            onChange={
+              handleChange
+            }
+            options={[
+              "Wi-Fi",
+              "Router",
+              "Datos móviles",
+              "Fibra óptica",
+              "ADSL",
+              "Satelital",
+              "Otro",
+            ]}
+          />
+
+          <ScaleField
+            label="¿Qué tan estable consideras tu conexión? (1–5)"
+            name="estabilidad_conexion"
+            value={
+              form.estabilidad_conexion
+            }
+            onChange={
+              handleChange
+            }
+          />
+
+          <SelectField
+            label="¿Con qué frecuencia tienes fallas de internet?"
+            name="frecuencia_fallas_internet"
+            value={
+              form.frecuencia_fallas_internet
+            }
+            onChange={
+              handleChange
+            }
+            options={[
+              "Nunca",
+              "Rara vez",
+              "A veces",
+              "Frecuentemente",
+            ]}
+            full
+          />
+        </div>
+      </section>
+
+      <section className="surveySection">
+        <div className="surveySectionHeader">
+          <span className="panelEyebrow">
+            SECCIÓN 4
+          </span>
+
+          <h2>
+            Contraseñas y protección
+          </h2>
+
+          <p>
+            Estas preguntas permiten identificar
+            hábitos relacionados con el manejo
+            de contraseñas.
+          </p>
+        </div>
+
+        <div className="surveyFieldsGrid">
+          <SelectField
+            label="¿Con qué frecuencia cambias tus contraseñas?"
+            name="cambio_contrasenas_anual"
+            value={
+              form.cambio_contrasenas_anual
+            }
+            onChange={
+              handleChange
+            }
+            options={[
+              "Nunca",
+              "Una vez al año",
+              "Cada 6 meses",
+              "Cada 3 meses o menos",
+            ]}
+          />
+
+          <SelectField
+            label="¿Reutilizas la misma contraseña en diferentes servicios?"
+            name="reutiliza_contrasenas"
+            value={
+              form.reutiliza_contrasenas
+            }
+            onChange={
+              handleChange
+            }
+            options={[
+              "Sí",
+              "A veces",
+              "No",
+            ]}
+          />
+
+          <ScaleField
+            label="¿Qué tan importante consideras actualizar las contraseñas? (1–5)"
+            name="importancia_actualizar_contrasenas"
+            value={
+              form.importancia_actualizar_contrasenas
+            }
+            onChange={
+              handleChange
+            }
+            full
+          />
+        </div>
+      </section>
+
+      {error && (
+        <div className="errorBox">
+          {error}
+        </div>
+      )}
+
+      <div className="surveyActions">
+        <button
+          type="submit"
+          className="surveySubmit"
+          disabled={loading}
+        >
+          {loading
+            ? "Calculando..."
+            : "Calcular mi riesgo"}
+        </button>
+      </div>
+    </form>
+  );
+}

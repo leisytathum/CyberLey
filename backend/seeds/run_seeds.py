@@ -12,19 +12,16 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 
-from seeds.seed_surveys import seed_surveys
 from seeds.seed_users import seed_users
 
 
 def main() -> None:
     print("=" * 55)
-    print("CYBERLEY - CARGA DE DATOS DE PRUEBA")
+    print("CYBERLEY - CARGA DE USUARIOS DE PRUEBA")
     print("=" * 55)
 
     try:
-        users = seed_users()
-
-        seed_surveys(users)
+        seed_users()
 
         print("\n" + "=" * 55)
         print("SEEDS EJECUTADOS CORRECTAMENTE")
