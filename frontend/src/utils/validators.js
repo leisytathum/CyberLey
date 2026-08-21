@@ -73,11 +73,6 @@ export function isStrongPassword(password) {
   ).every(Boolean);
 }
 
-export function isStrongPassword(password) {
-  return Object.values(
-    passwordChecks(password)
-  ).every(Boolean);
-}
 export function normalizeEmail(email) {
   return email
     .trim()

@@ -35,6 +35,10 @@ Crea `backend/.env` tomando como base `.env.example`.
 ```powershell
 python run.py
 ```
+## Ejecutar seeds
+cd backend
+venv\Scripts\activate
+python seeds/run_seeds.py
 
 ## Después de un `git pull`
 
