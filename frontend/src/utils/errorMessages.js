@@ -18,9 +18,20 @@ export function getFriendlyError(error) {
   if (
     normalized.includes(
       "user already registered"
+    ) ||
+    normalized.includes(
+      "already registered"
     )
   ) {
-    return "Ya existe una cuenta con este correo.";
+    return "Ya existe una cuenta registrada con este correo.";
+  }
+
+  if (
+    normalized.includes(
+      "password should be"
+    )
+  ) {
+    return "La contraseña no cumple los requisitos de seguridad.";
   }
 
   if (
@@ -32,7 +43,7 @@ export function getFriendlyError(error) {
   if (
     normalized.includes("timeout")
   ) {
-    return "La solicitud está tardando más de lo esperado. Intenta nuevamente.";
+    return "La solicitud tardó demasiado. Intenta nuevamente.";
   }
 
   if (

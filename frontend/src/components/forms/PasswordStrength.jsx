@@ -13,12 +13,13 @@ export default function PasswordStrength({
   const checks = passwordChecks(password);
 
   const items = [
-    ["length", "Al menos 8 caracteres"],
-    ["uppercase", "Una letra mayúscula"],
-    ["lowercase", "Una letra minúscula"],
-    ["number", "Un número"],
-    ["special", "Un símbolo"],
-  ];
+  ["length", "Al menos 8 caracteres"],
+  ["uppercase", "Una letra mayúscula"],
+  ["lowercase", "Una letra minúscula"],
+  ["number", "Un número"],
+  ["special", "Un símbolo"],
+  ["noSpaces", "Sin espacios"],
+];
 
   if (!password) return null;
 

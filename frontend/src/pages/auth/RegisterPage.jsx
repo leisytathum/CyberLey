@@ -18,9 +18,11 @@ import {
 } from "../../data/hondurasLocations";
 
 import {
+  calculateAge,
   isStrongPassword,
   isValidEmail,
-  validateAge,
+  normalizeEmail,
+  validateBirthDate,
 } from "../../utils/validators";
 
 import {
@@ -31,10 +33,21 @@ import { supabase } from "../../services/supabaseClient";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+    function getMaximumBirthDate() {
+    const date = new Date();
+
+    date.setFullYear(
+      date.getFullYear() - 14
+    );
+
+    return date
+      .toISOString()
+      .split("T")[0];
+  }
 
   const [form, setForm] = useState({
     nombre: "",
-    edad: "",
+    fechaNacimiento: "",
     genero: "",
     departamento: "Atlántida",
     ciudad: "",
@@ -42,7 +55,7 @@ export default function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
-  });
+});
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -92,10 +105,12 @@ export default function RegisterPage() {
         "Ingresa tu nombre completo.";
     }
 
-    const ageError = validateAge(form.edad);
+    const birthDateError =
+      validateBirthDate(form.fechaNacimiento);
 
-    if (ageError) {
-      nextErrors.edad = ageError;
+    if (birthDateError) {
+      nextErrors.fechaNacimiento =
+        birthDateError;
     }
 
     if (!form.genero) {
@@ -166,23 +181,33 @@ export default function RegisterPage() {
         data,
         error,
       } = await supabase.auth.signUp({
-        email: form.email
-          .trim()
-          .toLowerCase(),
+        email: normalizeEmail(form.email),
 
         password: form.password,
 
         options: {
-          data: {
-            nombre_completo: form.nombre.trim(),
-            edad: Number(form.edad),
-            genero: form.genero,
-            departamento: form.departamento,
-            ciudad: form.ciudad,
-            nivel_educativo:
-              form.nivel_educativo,
+            data: {
+              nombre_completo:
+                form.nombre.trim(),
+
+              fecha_nacimiento:
+                form.fechaNacimiento,
+
+              edad,
+
+              genero:
+                form.genero,
+
+              departamento:
+                form.departamento,
+
+              ciudad:
+                form.ciudad,
+
+              nivel_educativo:
+                form.nivel_educativo,
+            },
           },
-        },
       });
 
       if (error) {
@@ -324,35 +349,29 @@ export default function RegisterPage() {
           {/* EDAD */}
 
           <div className="fieldGroup">
-            <label htmlFor="edad">
-              Edad
+            <label htmlFor="fechaNacimiento">
+              Fecha de nacimiento
             </label>
 
             <input
-              id="edad"
-              name="edad"
-              type="number"
-              min="10"
-              max="100"
-              placeholder="Ej. 20"
-              value={form.edad}
+              id="fechaNacimiento"
+              name="fechaNacimiento"
+              type="date"
+              max={getMaximumBirthDate()}
+              value={form.fechaNacimiento}
               onChange={change}
               className={
-                errors.edad
+                errors.fechaNacimiento
                   ? "standaloneInput inputError"
                   : "standaloneInput"
               }
             />
 
-            {errors.edad && (
+            {errors.fechaNacimiento && (
               <span className="fieldError">
-                {errors.edad}
+                {errors.fechaNacimiento}
               </span>
             )}
-
-            <span className="fieldHint">
-              Edad permitida: entre 10 y 100 años.
-            </span>
           </div>
 
           {/* GÉNERO */}

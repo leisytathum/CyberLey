@@ -1,22 +1,56 @@
 export function isValidEmail(value) {
+  const email =
+    normalizeEmail(value);
+
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-    value.trim()
+    email
   );
 }
 
-export function validateAge(value) {
-  const age = Number(value);
+export function calculateAge(birthDate) {
+  if (!birthDate) return null;
 
-  if (!Number.isInteger(age)) {
-    return "La edad debe ser un número entero.";
+  const today = new Date();
+  const birth = new Date(`${birthDate}T00:00:00`);
+
+  let age =
+    today.getFullYear() -
+    birth.getFullYear();
+
+  const monthDifference =
+    today.getMonth() -
+    birth.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (
+      monthDifference === 0 &&
+      today.getDate() < birth.getDate()
+    )
+  ) {
+    age--;
   }
 
-  if (age < 10) {
-    return "La edad mínima permitida es 10 años.";
+  return age;
+}
+
+export function validateBirthDate(birthDate) {
+  if (!birthDate) {
+    return "Selecciona tu fecha de nacimiento.";
+  }
+
+  const age = calculateAge(birthDate);
+
+  if (age === null) {
+    return "Selecciona una fecha válida.";
+  }
+
+  if (age < 14) {
+    return "Debes tener al menos 14 años para registrarte.";
   }
 
   if (age > 100) {
-    return "La edad máxima permitida es 100 años.";
+    return "Ingresa una fecha de nacimiento válida.";
   }
 
   return "";
@@ -29,6 +63,7 @@ export function passwordChecks(password) {
     lowercase: /[a-z]/.test(password),
     number: /\d/.test(password),
     special: /[^A-Za-z0-9]/.test(password),
+    noSpaces: !/\s/.test(password),
   };
 }
 
@@ -36,4 +71,15 @@ export function isStrongPassword(password) {
   return Object.values(
     passwordChecks(password)
   ).every(Boolean);
+}
+
+export function isStrongPassword(password) {
+  return Object.values(
+    passwordChecks(password)
+  ).every(Boolean);
+}
+export function normalizeEmail(email) {
+  return email
+    .trim()
+    .toLowerCase();
 }
