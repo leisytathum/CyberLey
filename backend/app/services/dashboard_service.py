@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 
 from app.database.supabase_client import SupabaseRESTClient
 
@@ -8,16 +9,26 @@ from app.database.supabase_client import SupabaseRESTClient
 def get_summary(token: str) -> dict:
     db = SupabaseRESTClient(token)
 
-    participants = db.get(
-        "participantes",
-        limit=1000,
-    )
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        profiles_future = executor.submit(db.get_all, "perfiles")
+        participants_future = executor.submit(db.get_all, "participantes")
+        surveys_future = executor.submit(
+            db.get_all,
+            "respuestas_encuesta_ciberseguridad",
+            order="fecha_respuesta.desc",
+        )
+        profiles = profiles_future.result()
+        all_participants = participants_future.result()
+        all_surveys = surveys_future.result()
 
-    surveys = db.get(
-        "respuestas_encuesta_ciberseguridad",
-        order="fecha_respuesta.desc",
-        limit=1000,
-    )
+    roles = {row.get("id"): row.get("rol") for row in profiles}
+    participants = [row for row in all_participants if roles.get(row.get("id_usuario")) == "usuario"]
+
+    surveys = [
+        row
+        for row in all_surveys
+        if roles.get(row.get("id_usuario")) == "usuario"
+    ]
 
     total_participants = len(participants)
     total_surveys = len(surveys)
@@ -113,11 +124,6 @@ def get_summary(token: str) -> dict:
             (value / total_surveys) * 100
         )
 
-    profiles = db.get(
-        "perfiles",
-        limit=1000,
-    )
-
     profiles_by_id = {
         profile.get("id"): profile
         for profile in profiles
@@ -152,10 +158,12 @@ def get_summary(token: str) -> dict:
             }
         )
 
+    participant_user_ids = {row.get("id_usuario") for row in participants}
+    evaluated_participants = {row.get("id_usuario") for row in surveys if row.get("id_usuario") in participant_user_ids}
     participation_percentage = (
         round(
             (
-                total_surveys
+                len(evaluated_participants)
                 / total_participants
             )
             * 100
@@ -202,4 +210,10 @@ def get_summary(token: str) -> dict:
         },
 
         "evaluaciones_recientes": recent,
+        "tendencia": _build_trend(surveys),
     }
+
+
+def _build_trend(surveys: list[dict]) -> list[dict]:
+    by_day = Counter(str(row.get("fecha_respuesta", ""))[:10] for row in surveys if row.get("fecha_respuesta"))
+    return [{"fecha": day, "evaluaciones": by_day[day]} for day in sorted(by_day)]

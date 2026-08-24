@@ -1,4 +1,3 @@
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Toaster } from "sonner";
 
@@ -9,19 +8,18 @@ import { ThemeProvider } from "./context/ThemeContext";
 import "./styles/global.css";
 import "./styles/auth.css";
 import "./styles/user.css";
+import "./styles/loading.css";
 
 createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <ThemeProvider>
-      <AuthProvider>
-        <App />
+  <ThemeProvider>
+    <AuthProvider>
+      <App />
 
-        <Toaster
-          richColors
-          position="top-right"
-          closeButton
-        />
-      </AuthProvider>
-    </ThemeProvider>
-  </StrictMode>
+      <Toaster
+        richColors
+        position="top-right"
+        closeButton
+      />
+    </AuthProvider>
+  </ThemeProvider>
 );

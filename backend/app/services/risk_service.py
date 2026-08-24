@@ -1,4 +1,5 @@
 from app.schemas.risk_schema import RiskInput
+from concurrent.futures import ThreadPoolExecutor
 
 
 def calculate(payload: RiskInput) -> tuple[int, str, str]:
@@ -43,13 +44,78 @@ def calculate(payload: RiskInput) -> tuple[int, str, str]:
     return score, classification, observation
 
 
-def list_risk_responses(token: str, limit: int = 500) -> list[dict]:
+def list_risk_responses(token: str) -> list[dict]:
     from app.database.supabase_client import SupabaseRESTClient
 
-    return SupabaseRESTClient(token).get(
+    db = SupabaseRESTClient(token)
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        rows_future = executor.submit(
+            db.get_all,
+            "respuestas_encuesta_ciberseguridad",
+            order="puntaje_riesgo.desc",
+        )
+        participants_future = executor.submit(db.get_all, "participantes")
+        profiles_future = executor.submit(db.get_all, "perfiles")
+        rows = rows_future.result()
+        participants = {
+            x.get("id_usuario"): x for x in participants_future.result()
+        }
+        profiles = {x.get("id"): x for x in profiles_future.result()}
+    return [
+        {
+            **row,
+            "nombre_usuario": participants.get(row.get("id_usuario"), {}).get("nombre_completo")
+            or profiles.get(row.get("id_usuario"), {}).get("nombre_completo")
+            or "Usuario desconocido",
+        }
+        for row in rows
+        if profiles.get(row.get("id_usuario"), {}).get("rol") == "usuario"
+    ]
+
+
+def risk_analytics(token: str) -> dict:
+    rows = list_risk_responses(token)
+    total = len(rows)
+    scores = [x.get("puntaje_riesgo") for x in rows if isinstance(x.get("puntaje_riesgo"), (int, float))]
+    distribution = {level: sum(x.get("clasificacion_riesgo") == level for x in rows) for level in ("bajo", "medio", "alto")}
+    factors = {
+        "Reutiliza contraseñas": sum(x.get("reutiliza_contrasenas") in {"Sí", "A veces"} for x in rows),
+        "No reconoce phishing": sum(x.get("reconoce_phishing") in {"No", "A veces"} for x in rows),
+        "Antivirus desactualizado o ausente": sum(x.get("estado_antivirus") in {"No tengo antivirus", "Tengo antivirus, pero no está actualizado", "No sé"} for x in rows),
+        "Bajo conocimiento": sum(x.get("nivel_conocimiento") == "Bajo" for x in rows),
+        "Nunca cambia contraseñas": sum(x.get("cambio_contrasenas_anual") == "Nunca" for x in rows),
+        "Poca información de seguridad": sum(x.get("frecuencia_info_seguridad") in {"Nunca", "Rara vez"} for x in rows),
+        "Manejo bajo de ciberseguridad": sum(x.get("manejo_ciberseguridad") in {1, 2} for x in rows),
+        "Conexión inestable": sum(x.get("estabilidad_conexion") in {1, 2} for x in rows),
+    }
+    trend: dict[str, int] = {}
+    for row in rows:
+        day = str(row.get("fecha_respuesta") or "")[:10]
+        if day: trend[day] = trend.get(day, 0) + 1
+    def cross(field: str) -> list[dict]:
+        values: dict[tuple[str, str], int] = {}
+        for row in rows:
+            key = (str(row.get(field) or "Sin dato"), str(row.get("clasificacion_riesgo") or "sin clasificar"))
+            values[key] = values.get(key, 0) + 1
+        return [{"categoria": a, "riesgo": b, "cantidad": value} for (a, b), value in values.items()]
+    return {
+        "items": rows, "total": total,
+        "promedio_riesgo": round(sum(scores) / len(scores), 1) if scores else 0,
+        "distribucion": distribution,
+        "factores": [{"nombre": name, "cantidad": value} for name, value in sorted(factors.items(), key=lambda x: x[1], reverse=True)],
+        "tendencia": [{"fecha": day, "evaluaciones": trend[day]} for day in sorted(trend)],
+        "conocimiento_riesgo": cross("nivel_conocimiento"),
+        "phishing_riesgo": cross("reconoce_phishing"),
+    }
+
+
+def user_risk_responses(token: str, user_id: str) -> list[dict]:
+    from app.database.supabase_client import SupabaseRESTClient
+
+    return SupabaseRESTClient(token).get_all(
         "respuestas_encuesta_ciberseguridad",
-        order="puntaje_riesgo.desc",
-        limit=limit,
+        filters={"id_usuario": f"eq.{user_id}"},
+        order="fecha_respuesta.desc",
     )
 
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+
 from app.database.supabase_client import (
     SupabaseRESTClient,
 )
@@ -11,16 +13,21 @@ def list_surveys(
 ) -> list[dict]:
     client = SupabaseRESTClient(token)
 
-    surveys = client.get(
-        "respuestas_encuesta_ciberseguridad",
-        order="fecha_respuesta.desc",
-        limit=limit,
-    )
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        surveys_future = executor.submit(
+            client.get_all,
+            "respuestas_encuesta_ciberseguridad",
+            order="fecha_respuesta.desc",
+        )
+        profiles_future = executor.submit(client.get_all, "perfiles")
+        participants_future = executor.submit(client.get_all, "participantes")
+        surveys = surveys_future.result()
+        profiles = profiles_future.result()
+        participant_rows = participants_future.result()
 
-    profiles = client.get(
-        "perfiles",
-        limit=limit,
-    )
+    participants_by_user = {
+        row.get("id_usuario"): row for row in participant_rows
+    }
 
     profiles_by_id = {
         profile["id"]: profile
@@ -34,18 +41,20 @@ def list_surveys(
             survey.get("id_usuario"),
             {},
         )
+        if profile.get("rol") != "usuario":
+            continue
+        participant = participants_by_user.get(survey.get("id_usuario"), {})
 
         result.append(
             {
                 **survey,
-                "nombre_usuario": profile.get(
-                    "nombre_completo",
-                    "Usuario desconocido",
-                ),
+                "nombre_usuario": participant.get("nombre_completo") or profile.get("nombre_completo") or "Usuario desconocido",
                 "rol_usuario": profile.get(
                     "rol",
                     "usuario",
                 ),
+                "ciudad": participant.get("ciudad"),
+                "nivel_educativo": participant.get("nivel_educativo"),
             }
         )
 

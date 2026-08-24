@@ -1,5 +1,4 @@
 import {
-  FiActivity,
   FiBarChart2,
   FiBookOpen,
   FiChevronLeft,

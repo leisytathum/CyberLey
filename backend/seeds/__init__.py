@@ -1,1 +1,1 @@
-# Seeds de datos de prueba de CyberLey.
+# Seeds exclusivos de usuarios de CyberLey.

@@ -176,6 +176,7 @@ export default function RegisterPage() {
 
     try {
       setLoading(true);
+      const edad = calculateAge(form.fechaNacimiento);
 
       const {
         data,

@@ -304,20 +304,9 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="dashboardPage">
-        <section className="dashboardPanel">
-          <span className="panelEyebrow">
-            CyberLey
-          </span>
-
-          <h3>
-            Cargando información...
-          </h3>
-
-          <p>
-            Estamos consultando los datos
-            del sistema.
-          </p>
-        </section>
+        <div className="moduleSkeleton" aria-label="Actualizando dashboard">
+          <span /><span /><span />
+        </div>
       </div>
     );
   }

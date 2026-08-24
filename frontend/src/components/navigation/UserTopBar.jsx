@@ -1,7 +1,5 @@
 import {
-  FiBell,
   FiMenu,
-  FiSearch,
 } from "react-icons/fi";
 
 import ThemeToggle from "../common/ThemeToggle";
@@ -46,25 +44,7 @@ export default function UserTopbar({
       </div>
 
       <div className="topbarActions">
-        <div className="topbarSearch">
-          <FiSearch />
-
-          <input
-            type="search"
-            placeholder="Buscar en CyberLey..."
-          />
-        </div>
-
         <ThemeToggle />
-
-        <button
-          type="button"
-          className="notificationButton"
-        >
-          <FiBell />
-
-          <span className="notificationDot" />
-        </button>
 
         <div className="topbarUser">
           <div className="topbarAvatar">

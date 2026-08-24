@@ -104,7 +104,12 @@ def _create_auth_user(
             "email_confirm": True,
             "user_metadata": {
                 "nombre_completo": user_data["nombre_completo"],
-                "rol": user_data["rol"],
+            },
+            # Solo el API administrativo puede escribir app_metadata. El
+            # trigger de registro usa esta marca para crear admins de seed
+            # sin permitir que un registro público se autoasigne ese rol.
+            "app_metadata": {
+                "seed_role": user_data["rol"],
             },
         },
     )

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from app.controllers.risk_controller import evaluate, get_risk
+from app.controllers.risk_controller import evaluate, get_my_risk, get_risk
 from app.middlewares.auth import current_user
 from app.middlewares.roles import require_admin
 from app.schemas.risk_schema import RiskInput
@@ -17,3 +17,8 @@ def risk_list(user: dict = Depends(require_admin)):
 @router.post("/evaluar")
 def risk_evaluate(payload: RiskInput, user: dict = Depends(current_user)):
     return evaluate(payload, user)
+
+
+@router.get("/mis-resultados")
+def my_risk(user: dict = Depends(current_user)):
+    return get_my_risk(user)

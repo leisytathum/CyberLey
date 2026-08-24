@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { env } from '../config/env'
-export const supabase = createClient(env.supabaseUrl || 'https://placeholder.supabase.co', env.supabaseKey || 'placeholder', {
+if (!env.supabaseUrl || !env.supabaseKey) throw new Error('Faltan VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY.')
+export const supabase = createClient(env.supabaseUrl, env.supabaseKey, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 })

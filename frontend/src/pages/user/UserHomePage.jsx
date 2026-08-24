@@ -6,7 +6,7 @@ import {
 
 import { Link } from "react-router-dom";
 
-import { supabase } from "../../services/supabaseClient";
+import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 
 function formatDate(value) {
@@ -38,6 +38,7 @@ export default function UserHomePage() {
 
   const [loading, setLoading] =
     useState(true);
+  const [error, setError] = useState("");
 
   const firstName =
     profile?.nombre_completo?.split(" ")[0] ||
@@ -50,22 +51,12 @@ export default function UserHomePage() {
         return;
       }
 
-      const { data } = await supabase
-        .from(
-          "respuestas_encuesta_ciberseguridad"
-        )
-        .select("*")
-        .eq("id_usuario", user.id)
-        .order(
-          "fecha_respuesta",
-          {
-            ascending: false,
-          }
-        )
-        .limit(5);
-
-      setEvaluations(data || []);
-      setLoading(false);
+      try {
+        const { data } = await api.cachedGet("/riesgo/mis-resultados");
+        setEvaluations((data.items || []).slice(0, 5));
+      } catch (requestError) {
+        setError(requestError.message);
+      } finally { setLoading(false); }
     }
 
     loadEvaluations();
@@ -157,12 +148,10 @@ export default function UserHomePage() {
       </section>
 
       {loading ? (
-        <section className="userCard">
-          <p>
-            Cargando tu información...
-          </p>
-        </section>
-      ) : !lastEvaluation ? (
+        <div className="moduleSkeleton" aria-label="Actualizando resultados">
+          <span /><span /><span />
+        </div>
+      ) : error ? <div className="warningBox">{error}</div> : !lastEvaluation ? (
         <section className="userEmptyState">
           <div className="userEmptyIcon">
             ?
@@ -376,59 +365,37 @@ export default function UserHomePage() {
                 Mejora tu seguridad
               </h2>
 
-              <div className="userTip">
-                <span className="userTipNumber">
-                  01
-                </span>
-
-                <div>
-                  <strong>
-                    Contraseñas únicas
-                  </strong>
-
-                  <p>
-                    Evita utilizar la misma
-                    contraseña en diferentes
-                    plataformas.
-                  </p>
-                </div>
-              </div>
-
-              <div className="userTip">
-                <span className="userTipNumber">
-                  02
-                </span>
-
-                <div>
-                  <strong>
-                    Verifica antes de abrir
-                  </strong>
-
-                  <p>
-                    Revisa enlaces y remitentes
-                    antes de compartir información.
-                  </p>
-                </div>
-              </div>
-
-              <div className="userTip">
-                <span className="userTipNumber">
-                  03
-                </span>
-
-                <div>
-                  <strong>
-                    Mantente actualizado
-                  </strong>
-
-                  <p>
-                    Mantén tus dispositivos,
-                    aplicaciones y antivirus
-                    actualizados.
-                  </p>
-                </div>
-              </div>
+              <p>Consulta las guías disponibles y elige recursos acordes con tu nivel de riesgo.</p>
+              <Link to="/usuario/guias" className="userTextLink">Ver guías de ciberseguridad →</Link>
             </article>
+          </section>
+
+          <section className="userHistoryCard">
+            <div className="userCardHeading">
+              <div>
+                <span className="userSectionLabel">
+                  TUS RESPUESTAS
+                </span>
+                <h2>Resumen de la última evaluación</h2>
+              </div>
+            </div>
+            <div className="moduleGrid">
+              {[
+                ["Conocimiento", "nivel_conocimiento"],
+                ["Reconoce phishing", "reconoce_phishing"],
+                ["Antivirus", "estado_antivirus"],
+                ["Reutiliza contraseñas", "reutiliza_contrasenas"],
+                ["Usa nube", "usa_nube"],
+                ["Plataforma", "plataforma_nube"],
+                ["Conexión", "tipo_conexion"],
+                ["Fallas de internet", "frecuencia_fallas_internet"],
+              ].map(([label, field]) => (
+                <article className="moduleCard" key={field}>
+                  <span className="userSectionLabel">{label}</span>
+                  <h3>{lastEvaluation[field] || "No disponible"}</h3>
+                </article>
+              ))}
+            </div>
           </section>
 
           <section className="userHistoryCard">

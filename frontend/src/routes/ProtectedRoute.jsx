@@ -25,13 +25,7 @@ export default function ProtectedRoute({
    */
   if (loading) {
     return (
-      <div className="routeLoader">
-        <div className="routeLoaderSpinner" />
-
-        <p>
-          Preparando tu espacio...
-        </p>
-      </div>
+      <div className="routeSkeleton" aria-label="Abriendo sesión" />
     );
   }
 

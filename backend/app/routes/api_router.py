@@ -7,6 +7,7 @@ from app.routes import (
     cleaning_routes,
     dashboard_routes,
     health_routes,
+    guides_routes,
     imports_routes,
     participants_routes,
     reports_routes,
@@ -18,6 +19,7 @@ from app.routes import (
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health_routes.router)
 api_router.include_router(auth_routes.router)
+api_router.include_router(guides_routes.router)
 api_router.include_router(dashboard_routes.router)
 api_router.include_router(participants_routes.router)
 api_router.include_router(surveys_routes.router)

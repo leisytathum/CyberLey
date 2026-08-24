@@ -4,6 +4,11 @@ import httpx
 
 from app.config.settings import settings
 
+_http_client = httpx.Client(
+    timeout=httpx.Timeout(30, connect=10),
+    limits=httpx.Limits(max_connections=30, max_keepalive_connections=15),
+)
+
 
 class SupabaseRESTClient:
     """Small PostgREST client that preserves the authenticated user's RLS context."""
@@ -34,25 +39,86 @@ class SupabaseRESTClient:
         if order:
             params["order"] = order
 
-        with httpx.Client(timeout=30) as client:
-            response = client.get(
-                f"{self.base_url}/{table}",
-                headers=self.headers,
-                params=params,
-            )
+        response = _http_client.get(
+            f"{self.base_url}/{table}",
+            headers=self.headers,
+            params=params,
+        )
 
         self._raise_for_supabase_error(response)
         return response.json()
 
+    def get_all(
+        self,
+        table: str,
+        *,
+        select: str = "*",
+        filters: dict[str, str] | None = None,
+        order: str | None = None,
+        page_size: int = 1000,
+    ) -> list[dict]:
+        """Read every visible row without silently truncating analytics."""
+        rows: list[dict] = []
+        offset = 0
+        while True:
+            params: dict[str, str] = {
+                "select": select,
+                "limit": str(page_size),
+                "offset": str(offset),
+            }
+            if filters:
+                params.update(filters)
+            if order:
+                params["order"] = order
+            response = _http_client.get(
+                f"{self.base_url}/{table}", headers=self.headers, params=params
+            )
+            self._raise_for_supabase_error(response)
+            batch = response.json()
+            rows.extend(batch)
+            if len(batch) < page_size:
+                return rows
+            offset += page_size
+
     def insert(self, table: str, payload: dict) -> list[dict]:
         headers = {**self.headers, "Prefer": "return=representation"}
-        with httpx.Client(timeout=30) as client:
-            response = client.post(
-                f"{self.base_url}/{table}",
-                headers=headers,
-                json=payload,
-            )
+        response = _http_client.post(
+            f"{self.base_url}/{table}",
+            headers=headers,
+            json=payload,
+        )
 
+        self._raise_for_supabase_error(response)
+        return response.json() if response.content else []
+
+    def update(
+        self, table: str, payload: dict, *, filters: dict[str, str]
+    ) -> list[dict]:
+        headers = {**self.headers, "Prefer": "return=representation"}
+        response = _http_client.patch(
+            f"{self.base_url}/{table}",
+            headers=headers,
+            params=filters,
+            json=payload,
+        )
+        self._raise_for_supabase_error(response)
+        return response.json() if response.content else []
+
+    def upsert(
+        self, table: str, payload: list[dict], *, on_conflict: str | None = None
+    ) -> list[dict]:
+        headers = {
+            **self.headers,
+            "Prefer": "resolution=merge-duplicates,return=representation",
+        }
+        params = {"on_conflict": on_conflict} if on_conflict else None
+        response = _http_client.post(
+            f"{self.base_url}/{table}",
+            headers=headers,
+            params=params,
+            json=payload,
+            timeout=60,
+        )
         self._raise_for_supabase_error(response)
         return response.json() if response.content else []
 
@@ -67,12 +133,11 @@ class SupabaseRESTClient:
             "Range": "0-0",
         }
 
-        with httpx.Client(timeout=30) as client:
-            response = client.get(
-                f"{self.base_url}/{table}",
-                headers=headers,
-                params=params,
-            )
+        response = _http_client.get(
+            f"{self.base_url}/{table}",
+            headers=headers,
+            params=params,
+        )
 
         self._raise_for_supabase_error(response)
         content_range = response.headers.get("content-range", "")

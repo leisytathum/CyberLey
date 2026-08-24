@@ -4,82 +4,40 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
+import { lazy, Suspense } from "react";
 
 import ProtectedRoute from "./ProtectedRoute";
 
-// AUTH
-import LoginPage from "../pages/auth/LoginPage";
-import RegisterPage from "../pages/auth/RegisterPage";
-
-// LAYOUTS
-import AdminLayout from "../layouts/AdminLayout";
-import UserLayout from "../layouts/UserLayout";
+// AUTH Y LAYOUTS
+const LoginPage=lazy(()=>import("../pages/auth/LoginPage"));
+const RegisterPage=lazy(()=>import("../pages/auth/RegisterPage"));
+const AdminLayout=lazy(()=>import("../layouts/AdminLayout"));
+const UserLayout=lazy(()=>import("../layouts/UserLayout"));
 
 // ADMIN
-import DashboardPage from "../pages/admin/DashboardPage";
-import ParticipantsPage from "../pages/admin/ParticipantsPage";
-import SurveysPage from "../pages/admin/SurveysPage";
-import RiskPage from "../pages/admin/RiskPage";
-import ReportsPage from "../pages/admin/ReportsPage";
-import ImportPage from "../pages/admin/ImportPage";
-import CleaningPage from "../pages/admin/CleaningPage";
-import BackupsPage from "../pages/admin/BackupsPage";
-import AdministrationPage from "../pages/admin/AdministrationPage";
+const DashboardPage=lazy(()=>import("../pages/admin/DashboardPage"));
+const ParticipantsPage=lazy(()=>import("../pages/admin/ParticipantsPage"));
+const SurveysPage=lazy(()=>import("../pages/admin/SurveysPage"));
+const RiskPage=lazy(()=>import("../pages/admin/RiskPage"));
+const ReportsPage=lazy(()=>import("../pages/admin/ReportsPage"));
+const ImportPage=lazy(()=>import("../pages/admin/ImportPage"));
+const CleaningPage=lazy(()=>import("../pages/admin/CleaningPage"));
+const BackupsPage=lazy(()=>import("../pages/admin/BackupsPage"));
+const AdministrationPage=lazy(()=>import("../pages/admin/AdministrationPage"));
+const AnalyticsPage=lazy(()=>import("../pages/admin/AnalyticsPage"));
+const GuidesPage=lazy(()=>import("../pages/admin/GuidesPage"));
 
 // USUARIO
-import UserHomePage from "../pages/user/UserHomePage";
-import SurveyPage from "../pages/user/SurveyPage";
-
-
-/*
-|--------------------------------------------------------------------------
-| Páginas temporales
-|--------------------------------------------------------------------------
-|
-| Estas dos se utilizan mientras construimos los módulos completos de
-| Dashboards y Guías. Evitan que el Sidebar mande al usuario al login
-| por una ruta inexistente.
-|
-*/
-
-function DashboardsPlaceholder() {
-  return (
-    <section className="dashboardPanel">
-      <span className="panelEyebrow">
-        Próximamente
-      </span>
-
-      <h2>Dashboards analíticos</h2>
-
-      <p>
-        Esta sección concentrará las visualizaciones
-        avanzadas y comparaciones de los datos de CyberLey.
-      </p>
-    </section>
-  );
-}
-
-function GuidesPlaceholder() {
-  return (
-    <section className="dashboardPanel">
-      <span className="panelEyebrow">
-        Contenido educativo
-      </span>
-
-      <h2>Guías de ciberseguridad</h2>
-
-      <p>
-        Desde aquí se administrarán las guías y recursos
-        educativos disponibles para los usuarios.
-      </p>
-    </section>
-  );
-}
+const UserHomePage=lazy(()=>import("../pages/user/UserHomePage"));
+const SurveyPage=lazy(()=>import("../pages/user/SurveyPage"));
+const ResultsPage=lazy(()=>import("../pages/user/ResultsPage"));
+const UserGuidesPage=lazy(()=>import("../pages/user/UserGuidesPage"));
 
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<div className="routeSkeleton" aria-label="Abriendo módulo" />}>
       <Routes>
 
         {/* =====================================================
@@ -134,13 +92,13 @@ export default function AppRouter() {
 
             <Route
               path="dashboards"
-              element={<DashboardsPlaceholder />}
+              element={<AnalyticsPage />}
             />
 
             {/* Contenido */}
             <Route
               path="guias"
-              element={<GuidesPlaceholder />}
+              element={<GuidesPage />}
             />
 
             <Route
@@ -197,6 +155,8 @@ export default function AppRouter() {
               path="encuesta"
               element={<SurveyPage />}
             />
+            <Route path="resultados" element={<ResultsPage />} />
+            <Route path="guias" element={<UserGuidesPage />} />
           </Route>
         </Route>
 
@@ -226,6 +186,7 @@ export default function AppRouter() {
         />
 
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

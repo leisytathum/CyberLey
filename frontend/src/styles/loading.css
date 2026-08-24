@@ -1,0 +1,41 @@
+.moduleSkeleton {
+  display: grid;
+  gap: 12px;
+  padding: 20px 0;
+}
+
+.moduleSkeleton span {
+  display: block;
+  height: 72px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 25%,
+    var(--color-surface-secondary) 50%,
+    var(--color-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: moduleShimmer 1.2s infinite;
+}
+
+.moduleSkeleton span:nth-child(2) { width: 88%; }
+.moduleSkeleton span:nth-child(3) { width: 72%; }
+
+@keyframes moduleShimmer {
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moduleSkeleton span { animation: none; }
+}
+
+.routeSkeleton {
+  min-height: 100vh;
+  background: var(--color-background);
+  opacity: 0;
+  animation: routeReveal .12s forwards;
+}
+
+@keyframes routeReveal {
+  to { opacity: 1; }
+}

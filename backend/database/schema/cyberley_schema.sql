@@ -29,6 +29,8 @@ CREATE TABLE public.participantes (
   genero character varying,
   ciudad character varying,
   nivel_educativo character varying,
+  departamento character varying,
+  fecha_nacimiento date,
   fecha_registro timestamp without time zone DEFAULT now(),
   CONSTRAINT participantes_pkey PRIMARY KEY (id_participante),
   CONSTRAINT participantes_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.perfiles(id)

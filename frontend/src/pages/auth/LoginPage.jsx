@@ -11,9 +11,11 @@ import { toast } from "sonner";
 
 import ThemeToggle from "../../components/common/ThemeToggle";
 import { supabase } from "../../services/supabaseClient";
+import { useAuth } from "../../context/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
 
   const [form, setForm] = useState({
     email: "",
@@ -81,16 +83,7 @@ export default function LoginPage() {
         throw error;
       }
 
-      const { data: profile, error: profileError } =
-        await supabase
-          .from("perfiles")
-          .select("nombre_completo, rol")
-          .eq("id", data.user.id)
-          .maybeSingle();
-
-      if (profileError) {
-        throw profileError;
-      }
+      const profile = await refreshProfile(data.user);
 
       if (!profile) {
         throw new Error(

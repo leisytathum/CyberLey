@@ -3,10 +3,10 @@ import { Outlet, useLocation } from "react-router-dom";
 
 import Sidebar from "../components/navigation/Sidebar";
 import Topbar from "../components/navigation/Topbar";
-
-import { supabase } from "../services/supabaseClient";
+import { useAuth } from "../context/AuthContext";
 
 import "../styles/admin-layout.css";
+import "../styles/modules.css";
 
 const pageInformation = {
   "/admin": {
@@ -78,39 +78,13 @@ const pageInformation = {
 
 export default function AdminLayout() {
   const location = useLocation();
+  const { profile } = useAuth();
 
   const [collapsed, setCollapsed] =
     useState(false);
 
   const [mobileOpen, setMobileOpen] =
     useState(false);
-
-  const [profile, setProfile] =
-    useState(null);
-
-  useEffect(() => {
-    async function loadProfile() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("perfiles")
-        .select(
-          "nombre_completo, rol, foto_url"
-        )
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (data) {
-        setProfile(data);
-      }
-    }
-
-    loadProfile();
-  }, []);
 
   useEffect(() => {
     setMobileOpen(false);

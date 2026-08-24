@@ -50,6 +50,8 @@ export default function SurveysPage() {
 
   const [riskFilter, setRiskFilter] =
     useState("todos");
+  const [knowledgeFilter, setKnowledgeFilter] = useState("todos");
+  const [phishingFilter, setPhishingFilter] = useState("todos");
 
   const [selected, setSelected] =
     useState(null);
@@ -60,17 +62,13 @@ export default function SurveysPage() {
   const [error, setError] =
     useState("");
 
-  useEffect(() => {
-    loadSurveys();
-  }, []);
-
   async function loadSurveys() {
     setLoading(true);
     setError("");
 
     try {
       const response =
-        await api.get("/encuestas");
+        await api.cachedGet("/encuestas");
 
       setRows(
         response.data.items || []
@@ -92,6 +90,10 @@ export default function SurveysPage() {
     }
   }
 
+  useEffect(() => {
+    loadSurveys();
+  }, []);
+
   const filteredRows =
     useMemo(() => {
       const normalizedSearch =
@@ -108,6 +110,8 @@ export default function SurveysPage() {
         if (!matchesRisk) {
           return false;
         }
+        if (knowledgeFilter !== "todos" && row.nivel_conocimiento !== knowledgeFilter) return false;
+        if (phishingFilter !== "todos" && row.reconoce_phishing !== phishingFilter) return false;
 
         if (!normalizedSearch) {
           return true;
@@ -132,6 +136,8 @@ export default function SurveysPage() {
       rows,
       search,
       riskFilter,
+      knowledgeFilter,
+      phishingFilter,
     ]);
 
   return (
@@ -264,12 +270,20 @@ export default function SurveysPage() {
               Riesgo alto
             </option>
           </select>
+          <select value={knowledgeFilter} onChange={event=>setKnowledgeFilter(event.target.value)}>
+            <option value="todos">Todo conocimiento</option>
+            {[...new Set(rows.map(row=>row.nivel_conocimiento).filter(Boolean))].map(value=><option key={value}>{value}</option>)}
+          </select>
+          <select value={phishingFilter} onChange={event=>setPhishingFilter(event.target.value)}>
+            <option value="todos">Todo reconocimiento de phishing</option>
+            {[...new Set(rows.map(row=>row.reconoce_phishing).filter(Boolean))].map(value=><option key={value}>{value}</option>)}
+          </select>
         </div>
 
         {loading ? (
-          <p>
-            Cargando encuestas...
-          </p>
+          <div className="moduleSkeleton" aria-label="Actualizando encuestas">
+            <span /><span /><span />
+          </div>
         ) : filteredRows.length === 0 ? (
           <p>
             No hay encuestas que coincidan
@@ -293,6 +307,7 @@ export default function SurveysPage() {
                   <th>Usuario</th>
                   <th>Fecha</th>
                   <th>Conocimiento</th>
+                  <th>Ciudad</th>
                   <th>Puntaje</th>
                   <th>Riesgo</th>
                   <th></th>
@@ -322,6 +337,7 @@ export default function SurveysPage() {
                           row.nivel_conocimiento
                         }
                       </td>
+                      <td>{row.ciudad || "—"}</td>
 
                       <td>
                         {
@@ -432,6 +448,12 @@ export default function SurveysPage() {
                 gap: "14px",
               }}
             >
+              <p>
+                <strong>Ciudad:</strong>{" "}{selected.ciudad || "No disponible"}
+              </p>
+              <p>
+                <strong>Nivel educativo:</strong>{" "}{selected.nivel_educativo || "No disponible"}
+              </p>
               <p>
                 <strong>
                   Nivel de conocimiento:

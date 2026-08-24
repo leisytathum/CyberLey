@@ -10,10 +10,10 @@ import {
 
 import UserSidebar from "../components/navigation/UserSidebar";
 import UserTopbar from "../components/navigation/UserTopbar";
-
-import { supabase } from "../services/supabaseClient";
+import { useAuth } from "../context/AuthContext";
 
 import "../styles/admin-layout.css";
+import "../styles/modules.css";
 
 const pageInformation = {
   "/usuario": {
@@ -44,6 +44,7 @@ const pageInformation = {
 export default function UserLayout() {
   const location =
     useLocation();
+  const { profile } = useAuth();
 
   const [
     collapsed,
@@ -54,40 +55,6 @@ export default function UserLayout() {
     mobileOpen,
     setMobileOpen,
   ] = useState(false);
-
-  const [
-    profile,
-    setProfile,
-  ] = useState(null);
-
-  useEffect(() => {
-    async function loadProfile() {
-      const {
-        data: { user },
-      } =
-        await supabase.auth.getUser();
-
-      if (!user) return;
-
-      const { data } =
-        await supabase
-          .from("perfiles")
-          .select(
-            "nombre_completo, rol, foto_url"
-          )
-          .eq(
-            "id",
-            user.id
-          )
-          .maybeSingle();
-
-      if (data) {
-        setProfile(data);
-      }
-    }
-
-    loadProfile();
-  }, []);
 
   useEffect(() => {
     setMobileOpen(false);
