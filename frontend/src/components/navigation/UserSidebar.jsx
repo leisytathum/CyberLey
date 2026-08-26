@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "../../services/supabaseClient";
+import { preloadRoute } from "../../routes/routeModules";
 
 const navigationGroups = [
   {
@@ -185,6 +186,8 @@ export default function UserSidebar({
                           onClick={
                             closeMobile
                           }
+                          onMouseEnter={() => preloadRoute(item.to)}
+                          onFocus={() => preloadRoute(item.to)}
                           title={
                             collapsed
                               ? item.label

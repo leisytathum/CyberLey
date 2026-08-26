@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     def is_development(self) -> bool:
         return self.app_env.lower() == "development"
 
+    @property
+    def frontend_origin_regex(self) -> str | None:
+        """Allow Vite's fallback ports only while developing locally."""
+        if not self.is_development:
+            return None
+        return r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+
 
 @lru_cache
 def get_settings() -> Settings:

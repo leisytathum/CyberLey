@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 
 import Sidebar from "../components/navigation/Sidebar";
 import Topbar from "../components/navigation/Topbar";
 import { useAuth } from "../context/AuthContext";
+import ModuleErrorBoundary from "../components/common/ModuleErrorBoundary";
 
 import "../styles/admin-layout.css";
 import "../styles/modules.css";
@@ -122,7 +123,11 @@ export default function AdminLayout() {
 
         <main className="adminContent">
           <div className="pageEnter">
-            <Outlet />
+            <ModuleErrorBoundary key={location.pathname}>
+              <Suspense fallback={<div className="moduleSkeleton"><span /><span /><span /></div>}>
+                <Outlet />
+              </Suspense>
+            </ModuleErrorBoundary>
           </div>
         </main>
       </div>

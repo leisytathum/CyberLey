@@ -1,4 +1,5 @@
 import {
+  Suspense,
   useEffect,
   useState,
 } from "react";
@@ -11,6 +12,7 @@ import {
 import UserSidebar from "../components/navigation/UserSidebar";
 import UserTopbar from "../components/navigation/UserTopbar";
 import { useAuth } from "../context/AuthContext";
+import ModuleErrorBoundary from "../components/common/ModuleErrorBoundary";
 
 import "../styles/admin-layout.css";
 import "../styles/modules.css";
@@ -109,7 +111,11 @@ export default function UserLayout() {
 
         <main className="adminContent">
           <div className="pageEnter">
-            <Outlet />
+            <ModuleErrorBoundary key={location.pathname}>
+              <Suspense fallback={<div className="moduleSkeleton"><span /><span /><span /></div>}>
+                <Outlet />
+              </Suspense>
+            </ModuleErrorBoundary>
           </div>
         </main>
       </div>

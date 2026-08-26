@@ -31,9 +31,12 @@
 
 .routeSkeleton {
   min-height: 100vh;
-  background: var(--color-background);
-  opacity: 0;
-  animation: routeReveal .12s forwards;
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) 24px 24px / calc(100% - 48px) 110px no-repeat,
+    linear-gradient(var(--color-surface), var(--color-surface)) 24px 154px / calc(68% - 24px) 280px no-repeat,
+    var(--color-background);
+  opacity: .7;
+  animation: routeReveal .25s ease-in-out infinite alternate;
 }
 
 @keyframes routeReveal {

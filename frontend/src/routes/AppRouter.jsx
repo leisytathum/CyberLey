@@ -7,31 +7,32 @@ import {
 import { lazy, Suspense } from "react";
 
 import ProtectedRoute from "./ProtectedRoute";
+import routeModules from "./routeModules";
 
 // AUTH Y LAYOUTS
-const LoginPage=lazy(()=>import("../pages/auth/LoginPage"));
-const RegisterPage=lazy(()=>import("../pages/auth/RegisterPage"));
-const AdminLayout=lazy(()=>import("../layouts/AdminLayout"));
-const UserLayout=lazy(()=>import("../layouts/UserLayout"));
+const LoginPage=lazy(routeModules.login);
+const RegisterPage=lazy(routeModules.register);
+const AdminLayout=lazy(routeModules.adminLayout);
+const UserLayout=lazy(routeModules.userLayout);
 
 // ADMIN
-const DashboardPage=lazy(()=>import("../pages/admin/DashboardPage"));
-const ParticipantsPage=lazy(()=>import("../pages/admin/ParticipantsPage"));
-const SurveysPage=lazy(()=>import("../pages/admin/SurveysPage"));
-const RiskPage=lazy(()=>import("../pages/admin/RiskPage"));
-const ReportsPage=lazy(()=>import("../pages/admin/ReportsPage"));
-const ImportPage=lazy(()=>import("../pages/admin/ImportPage"));
-const CleaningPage=lazy(()=>import("../pages/admin/CleaningPage"));
-const BackupsPage=lazy(()=>import("../pages/admin/BackupsPage"));
-const AdministrationPage=lazy(()=>import("../pages/admin/AdministrationPage"));
-const AnalyticsPage=lazy(()=>import("../pages/admin/AnalyticsPage"));
-const GuidesPage=lazy(()=>import("../pages/admin/GuidesPage"));
+const DashboardPage=lazy(routeModules.dashboard);
+const ParticipantsPage=lazy(routeModules.participants);
+const SurveysPage=lazy(routeModules.surveys);
+const RiskPage=lazy(routeModules.risk);
+const ReportsPage=lazy(routeModules.reports);
+const ImportPage=lazy(routeModules.imports);
+const CleaningPage=lazy(routeModules.cleaning);
+const BackupsPage=lazy(routeModules.backups);
+const AdministrationPage=lazy(routeModules.administration);
+const AnalyticsPage=lazy(routeModules.analytics);
+const GuidesPage=lazy(routeModules.adminGuides);
 
 // USUARIO
-const UserHomePage=lazy(()=>import("../pages/user/UserHomePage"));
-const SurveyPage=lazy(()=>import("../pages/user/SurveyPage"));
-const ResultsPage=lazy(()=>import("../pages/user/ResultsPage"));
-const UserGuidesPage=lazy(()=>import("../pages/user/UserGuidesPage"));
+const UserHomePage=lazy(routeModules.userHome);
+const SurveyPage=lazy(routeModules.userSurvey);
+const ResultsPage=lazy(routeModules.userResults);
+const UserGuidesPage=lazy(routeModules.userGuides);
 
 
 export default function AppRouter() {

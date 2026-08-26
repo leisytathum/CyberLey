@@ -19,6 +19,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { supabase } from "../../services/supabaseClient";
+import { preloadRoute } from "../../routes/routeModules";
 
 const navigationGroups = [
   {
@@ -209,6 +210,8 @@ export default function Sidebar({
                       to={item.to}
                       end={item.end}
                       onClick={closeMobile}
+                      onMouseEnter={() => preloadRoute(item.to)}
+                      onFocus={() => preloadRoute(item.to)}
                       title={
                         collapsed
                           ? item.label
