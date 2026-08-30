@@ -6,6 +6,7 @@ from app.routes import (
     backups_routes,
     cleaning_routes,
     dashboard_routes,
+    dynamic_surveys_routes,
     health_routes,
     guides_routes,
     imports_routes,
@@ -21,6 +22,7 @@ api_router.include_router(health_routes.router)
 api_router.include_router(auth_routes.router)
 api_router.include_router(guides_routes.router)
 api_router.include_router(dashboard_routes.router)
+api_router.include_router(dynamic_surveys_routes.router)
 api_router.include_router(participants_routes.router)
 api_router.include_router(surveys_routes.router)
 api_router.include_router(risk_routes.router)

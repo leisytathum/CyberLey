@@ -86,8 +86,8 @@
 }
 
 .authLogo {
-  width: 48px;
-  height: 48px;
+  width: 160px;
+  height: 108px;
 
   object-fit: contain;
 
@@ -103,7 +103,7 @@
 .authBrand span {
   color: white;
 
-  font-size: 1.15rem;
+  font-size: 1.8rem;
   font-weight: 850;
 
   letter-spacing: -0.02em;
@@ -135,7 +135,7 @@
   gap: 8px;
 
   padding:
-    8px 12px;
+    11px 17px;
 
   margin-bottom: 20px;
 
@@ -151,14 +151,14 @@
   color:
     rgba(255, 255, 255, 0.92);
 
-  font-size: 0.76rem;
+  font-size: 0.95rem;
   font-weight: 700;
 
   backdrop-filter: blur(14px);
 }
 
 .authBadge svg {
-  font-size: 0.95rem;
+  font-size: 1.15rem;
 }
 
 .authHeroContent h1 {
@@ -196,7 +196,8 @@
   color:
     rgba(255, 255, 255, 0.78);
 
-  font-size: 0.98rem;
+  font-size: 1.2rem;
+  font-weight: 600;
 
   line-height: 1.75;
 }
@@ -223,6 +224,8 @@
 
   background:
     rgba(255, 255, 255, 0.08);
+
+  animation: authFloat 9s ease-in-out infinite;
 }
 
 .authDecorationTwo {
@@ -234,6 +237,8 @@
 
   background:
     rgba(196, 181, 253, 0.13);
+
+  animation: authFloat 11s ease-in-out infinite reverse;
 }
 
 
@@ -249,7 +254,7 @@
   justify-content: center;
 
   padding:
-    88px 52px 52px;
+    72px 34px 42px;
 
   background:
     var(--color-background);
@@ -257,10 +262,10 @@
 
 .authCard {
   width: 100%;
-  max-width: 470px;
+  max-width: 560px;
 
   padding:
-    34px;
+    44px;
 
   border:
     1px solid
@@ -285,7 +290,74 @@
 }
 
 .authCardLarge {
-  max-width: 560px;
+  max-width: 780px;
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+}
+
+/* Inicio de sesión: escala más amplia y legible */
+.authCard:not(.authCardLarge) {
+  max-width: 650px;
+  padding: 56px;
+}
+
+.authCard:not(.authCardLarge) .authCardHeader {
+  margin-bottom: 36px;
+}
+
+.authCard:not(.authCardLarge) .eyebrow {
+  font-size: 1rem;
+}
+
+.authCard:not(.authCardLarge) .authCardHeader h2 {
+  font-size: clamp(2.4rem, 3.4vw, 3rem);
+}
+
+.authCard:not(.authCardLarge) .authCardHeader p {
+  font-size: 1.12rem;
+}
+
+.authCard:not(.authCardLarge) .fieldGroup {
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.authCard:not(.authCardLarge) .fieldGroup label {
+  font-size: 1.05rem;
+}
+
+.authCard:not(.authCardLarge) .inputWrapper {
+  min-height: 66px;
+  padding-inline: 19px;
+}
+
+.authCard:not(.authCardLarge) .inputWrapper input {
+  height: 64px;
+  font-size: 1.08rem;
+}
+
+.authCard:not(.authCardLarge) .inputWrapper > svg {
+  font-size: 1.2rem;
+}
+
+.authCard:not(.authCardLarge) .primaryButton,
+.authCard:not(.authCardLarge) .secondaryButton {
+  min-height: 64px;
+  font-size: 1.1rem;
+}
+
+.authCard:not(.authCardLarge) .authDivider p {
+  font-size: 1rem;
+}
+
+.authCardLarge > .authCardHeader,
+.authCardLarge > .authFieldFull,
+.authCardLarge > .formAlert,
+.authCardLarge > .primaryButton,
+.authCardLarge > .authFooterText {
+  grid-column: 1 / -1;
 }
 
 
@@ -303,7 +375,7 @@
   color:
     var(--color-primary);
 
-  font-size: 0.72rem;
+  font-size: 0.84rem;
   font-weight: 850;
 
   text-transform: uppercase;
@@ -318,9 +390,9 @@
 
   font-size:
     clamp(
-      1.65rem,
+      1.9rem,
       3vw,
-      2rem
+      2.35rem
     );
 
   letter-spacing: -0.03em;
@@ -333,7 +405,7 @@
   color:
     var(--color-text-secondary);
 
-  font-size: 0.86rem;
+  font-size: 1rem;
 
   line-height: 1.55;
 }
@@ -356,12 +428,12 @@
   color:
     var(--color-text);
 
-  font-size: 0.79rem;
+  font-size: 0.9rem;
   font-weight: 720;
 }
 
 .inputWrapper {
-  min-height: 48px;
+  min-height: 56px;
 
   display: flex;
   align-items: center;
@@ -423,15 +495,15 @@
   color:
     var(--color-text);
 
-  font-size: 0.86rem;
+  font-size: 0.96rem;
 }
 
 .inputWrapper input {
-  height: 46px;
+  height: 54px;
 }
 
 .inputWrapper select {
-  height: 46px;
+  height: 54px;
 
   cursor: pointer;
 }
@@ -442,7 +514,7 @@
 .standaloneInput {
   width: 100%;
 
-  min-height: 48px;
+  min-height: 56px;
 
   padding:
     0 14px;
@@ -462,7 +534,7 @@
   color:
     var(--color-text);
 
-  font-size: 0.86rem;
+  font-size: 0.96rem;
 
   transition:
     border-color
@@ -553,10 +625,13 @@
     var(--color-danger);
 
   font-size:
-    0.7rem;
+    0.84rem;
+
+  font-weight:
+    600;
 
   line-height:
-    1.4;
+    1.5;
 }
 
 .fieldHint {
@@ -683,7 +758,7 @@
 .secondaryButton {
   width: 100%;
 
-  min-height: 48px;
+  min-height: 56px;
 
   display: inline-flex;
   align-items: center;
@@ -695,7 +770,7 @@
     13px;
 
   font-size:
-    0.84rem;
+    1.04rem;
   font-weight:
     780;
 
@@ -831,7 +906,7 @@
     var(--color-muted);
 
   font-size:
-    0.7rem;
+    0.94rem;
 }
 
 .authFooterText {
@@ -845,7 +920,7 @@
     var(--color-text-secondary);
 
   font-size:
-    0.76rem;
+    1rem;
 }
 
 .authFooterText a {
@@ -853,7 +928,10 @@
     var(--color-primary);
 
   font-weight:
-    780;
+    850;
+
+  font-size:
+    1.05rem;
 
   text-decoration:
     none;
@@ -887,6 +965,16 @@
   to {
     transform:
       rotate(360deg);
+  }
+}
+
+@keyframes authFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(12px, -16px, 0) scale(1.04);
   }
 }
 
@@ -1042,10 +1130,10 @@
 
   .authLogo {
     width:
-      42px;
+      110px;
 
     height:
-      42px;
+      74px;
   }
 
   .authHeroContent {
@@ -1084,6 +1172,28 @@
       18px;
   }
 
+  .authCard:not(.authCardLarge) {
+    padding: 30px 24px;
+  }
+
+  .authCard:not(.authCardLarge) .authCardHeader h2 {
+    font-size: 2.15rem;
+  }
+
+  .authCard:not(.authCardLarge) .inputWrapper,
+  .authCard:not(.authCardLarge) .primaryButton,
+  .authCard:not(.authCardLarge) .secondaryButton {
+    min-height: 58px;
+  }
+
+  .authCardLarge {
+    grid-template-columns: 1fr;
+  }
+
+  .authCardLarge > * {
+    grid-column: auto;
+  }
+
   .passwordRequirements {
     grid-template-columns:
       1fr;
@@ -1100,5 +1210,13 @@
   .authHeroContent h1 {
     font-size:
       1.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .authCard,
+  .authDecorationOne,
+  .authDecorationTwo {
+    animation: none;
   }
 }

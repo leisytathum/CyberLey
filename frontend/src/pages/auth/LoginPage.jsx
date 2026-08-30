@@ -148,11 +148,6 @@ export default function LoginPage() {
             <span> Protege tu vida digital.</span>
           </h1>
 
-          <p>
-            Analiza tu comportamiento en línea, identifica
-            riesgos y descubre prácticas que pueden ayudarte
-            a navegar con mayor seguridad.
-          </p>
         </div>
 
         <div className="authDecoration authDecorationOne" />

@@ -1,11 +1,11 @@
 import {
   FiBarChart2,
   FiBookOpen,
+  FiChevronDown,
   FiChevronLeft,
   FiDatabase,
   FiFileText,
   FiHome,
-  FiLogOut,
   FiPieChart,
   FiRefreshCw,
   FiSettings,
@@ -15,15 +15,15 @@ import {
   FiX,
 } from "react-icons/fi";
 
-import { NavLink, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-
-import { supabase } from "../../services/supabaseClient";
+import { useEffect, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { preloadRoute } from "../../routes/routeModules";
 
 const navigationGroups = [
   {
     label: "Principal",
+    tone: "violet",
+    icon: FiHome,
     items: [
       {
         label: "Inicio",
@@ -36,6 +36,8 @@ const navigationGroups = [
 
   {
     label: "Análisis",
+    tone: "purple",
+    icon: FiBarChart2,
     items: [
       {
         label: "Participantes",
@@ -62,6 +64,8 @@ const navigationGroups = [
 
   {
     label: "Contenido",
+    tone: "blue",
+    icon: FiBookOpen,
     items: [
       {
         label: "Guías",
@@ -78,6 +82,8 @@ const navigationGroups = [
 
   {
     label: "Datos",
+    tone: "green",
+    icon: FiDatabase,
     items: [
       {
         label: "Importar datos",
@@ -99,6 +105,8 @@ const navigationGroups = [
 
   {
     label: "Sistema",
+    tone: "amber",
+    icon: FiSettings,
     items: [
       {
         label: "Administración",
@@ -114,27 +122,18 @@ export default function Sidebar({
   setCollapsed,
   mobileOpen,
   setMobileOpen,
-  profile,
 }) {
-  const navigate = useNavigate();
+  const location = useLocation();
+  const activeGroup = navigationGroups.find((group) =>
+    group.items.some((item) => item.end
+      ? location.pathname === item.to
+      : location.pathname.startsWith(item.to)),
+  )?.label;
+  const [openGroup, setOpenGroup] = useState(activeGroup || "Análisis");
 
-  async function logout() {
-    try {
-      await supabase.auth.signOut();
-
-      toast.success("Sesión cerrada correctamente.");
-
-      navigate("/login", {
-        replace: true,
-      });
-    } catch (error) {
-      console.error("[CyberLey logout]", error);
-
-      toast.error(
-        "No pudimos cerrar la sesión. Intenta nuevamente."
-      );
-    }
-  }
+  useEffect(() => {
+    if (activeGroup && activeGroup !== "Principal") setOpenGroup(activeGroup);
+  }, [activeGroup]);
 
   const closeMobile = () => {
     setMobileOpen(false);
@@ -189,18 +188,17 @@ export default function Sidebar({
         </div>
 
         <nav className="sidebarNavigation">
-          {navigationGroups.map((group) => (
-            <div
-              className="sidebarGroup"
+          {navigationGroups.map((group) => {
+            const GroupIcon = group.icon;
+            return <div
+              className={`sidebarGroup sidebarGroup-${group.tone} ${openGroup === group.label ? "sidebarGroupOpen" : ""}`}
               key={group.label}
             >
-              {!collapsed && (
-                <span className="sidebarGroupLabel">
-                  {group.label}
-                </span>
-              )}
+              {!collapsed && group.label !== "Principal" && <button type="button" className="sidebarGroupToggle" onClick={() => setOpenGroup((current) => current === group.label ? "" : group.label)} aria-expanded={openGroup === group.label}><span className="sidebarGroupTitle"><i><GroupIcon /></i>{group.label}</span><FiChevronDown className="sidebarGroupChevron" /></button>}
 
-              <div className="sidebarGroupItems">
+              {!collapsed && group.label === "Principal" && <span className="sidebarGroupLabel"><i><GroupIcon /></i>{group.label}</span>}
+
+              <div className={`sidebarGroupItems ${collapsed || group.label === "Principal" || openGroup === group.label ? "sidebarGroupItemsOpen" : ""}`}>
                 {group.items.map((item) => {
                   const Icon = item.icon;
 
@@ -241,61 +239,11 @@ export default function Sidebar({
                   );
                 })}
               </div>
-            </div>
-          ))}
+            </div>;
+          })}
         </nav>
 
-        <div className="sidebarFooter">
-          <div className="sidebarProfile">
-            <div className="sidebarAvatar">
-              {profile?.nombre_completo
-                ?.charAt(0)
-                ?.toUpperCase() || "A"}
-            </div>
-
-            {!collapsed && (
-              <div className="sidebarProfileInfo">
-                <strong>
-                  {profile?.nombre_completo ||
-                    "Administrador"}
-                </strong>
-
-                <span>
-                  {profile?.rol === "admin"
-                    ? "Administrador"
-                    : profile?.rol || ""}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <button
-            type="button"
-            className="sidebarLogout"
-            onClick={logout}
-            title="Cerrar sesión"
-          >
-            <FiLogOut />
-
-            {!collapsed && (
-              <span>Cerrar sesión</span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            className="sidebarCollapseButton"
-            onClick={() =>
-              setCollapsed((current) => !current)
-            }
-          >
-            <FiChevronLeft />
-
-            {!collapsed && (
-              <span>Contraer menú</span>
-            )}
-          </button>
-        </div>
+        <button type="button" className="sidebarEdgeToggle" onClick={() => setCollapsed((current) => !current)} aria-label={collapsed ? "Expandir menú" : "Contraer menú"} title={collapsed ? "Expandir menú" : "Contraer menú"}><FiChevronLeft /></button>
       </aside>
     </>
   );

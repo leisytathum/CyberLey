@@ -5,17 +5,12 @@ import {
   FiLock,
   FiMail,
   FiUser,
-  FiMapPin,
 } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import PasswordStrength from "../../components/forms/PasswordStrength";
 import ThemeToggle from "../../components/common/ThemeToggle";
-
-import {
-  hondurasLocations,
-} from "../../data/hondurasLocations";
 
 import {
   calculateAge,
@@ -50,7 +45,7 @@ export default function RegisterPage() {
     fechaNacimiento: "",
     genero: "",
     departamento: "Atlántida",
-    ciudad: "",
+    ciudad: "La Ceiba",
     nivel_educativo: "",
     email: "",
     password: "",
@@ -81,22 +76,6 @@ export default function RegisterPage() {
     }));
   };
 
-  const changeDepartment = (event) => {
-    const department = event.target.value;
-
-    setForm((current) => ({
-      ...current,
-      departamento: department,
-      ciudad: "",
-    }));
-
-    setErrors((current) => ({
-      ...current,
-      departamento: "",
-      ciudad: "",
-    }));
-  };
-
   const validate = () => {
     const nextErrors = {};
 
@@ -116,11 +95,6 @@ export default function RegisterPage() {
     if (!form.genero) {
       nextErrors.genero =
         "Selecciona tu género.";
-    }
-
-    if (!form.departamento) {
-      nextErrors.departamento =
-        "Selecciona tu departamento.";
     }
 
     if (!form.ciudad) {
@@ -273,22 +247,20 @@ export default function RegisterPage() {
 
         <div className="authHeroContent">
           <span className="authBadge">
-            Seguridad digital desde el inicio
+            Evalúa. Aprende. Protégete.
           </span>
 
           <h1>
             Conoce tus hábitos.
             <span>
               {" "}
-              Fortalece tu seguridad.
+              Protege tu vida digital.
             </span>
           </h1>
 
           <p>
-            Crea tu cuenta para evaluar tus
-            prácticas digitales, identificar
-            riesgos y acceder a recursos de
-            ciberseguridad.
+            Descubre tu nivel de riesgo y aprende a
+            navegar con mayor seguridad.
           </p>
         </div>
 
@@ -307,10 +279,10 @@ export default function RegisterPage() {
               Crear cuenta
             </span>
 
-            <h2>Únete a CyberLey</h2>
+            <h2>Crea tu cuenta</h2>
 
             <p>
-              Completa tus datos para comenzar.
+              Empieza tu evaluación.
             </p>
           </div>
 
@@ -421,57 +393,11 @@ export default function RegisterPage() {
             )}
           </div>
 
-          {/* DEPARTAMENTO */}
-
-          <div className="fieldGroup">
-            <label htmlFor="departamento">
-              Departamento
-            </label>
-
-            <div
-              className={`inputWrapper ${
-                errors.departamento
-                  ? "inputError"
-                  : ""
-              }`}
-            >
-              <FiMapPin />
-
-              <select
-                id="departamento"
-                name="departamento"
-                value={form.departamento}
-                onChange={changeDepartment}
-              >
-                <option value="">
-                  Selecciona un departamento
-                </option>
-
-                {Object.keys(
-                  hondurasLocations
-                ).map((department) => (
-                  <option
-                    key={department}
-                    value={department}
-                  >
-                    {department}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {errors.departamento && (
-              <span className="fieldError">
-                {errors.departamento}
-              </span>
-            )}
-          </div>
-
           {/* CIUDAD */}
 
           <div className="fieldGroup">
             <label htmlFor="ciudad">
-              Ciudad / municipio
+              Ciudad
             </label>
 
             <select
@@ -479,31 +405,15 @@ export default function RegisterPage() {
               name="ciudad"
               value={form.ciudad}
               onChange={change}
-              disabled={!form.departamento}
               className={
                 errors.ciudad
                   ? "standaloneInput inputError"
                   : "standaloneInput"
               }
             >
-              <option value="">
-                {form.departamento
-                  ? "Selecciona tu ciudad"
-                  : "Selecciona primero un departamento"}
+              <option value="La Ceiba">
+                La Ceiba
               </option>
-
-              {(
-                hondurasLocations[
-                  form.departamento
-                ] || []
-              ).map((city) => (
-                <option
-                  key={city}
-                  value={city}
-                >
-                  {city}
-                </option>
-              ))}
             </select>
 
             {errors.ciudad && (
@@ -515,7 +425,7 @@ export default function RegisterPage() {
 
           {/* NIVEL EDUCATIVO */}
 
-          <div className="fieldGroup">
+          <div className="fieldGroup authFieldFull">
             <label htmlFor="nivel_educativo">
               Nivel educativo
             </label>
@@ -565,7 +475,7 @@ export default function RegisterPage() {
 
           {/* CORREO */}
 
-          <div className="fieldGroup">
+          <div className="fieldGroup authFieldFull">
             <label htmlFor="email">
               Correo electrónico
             </label>

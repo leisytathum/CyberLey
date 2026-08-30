@@ -119,6 +119,18 @@ a {
   background: var(--color-primary-soft-2);
   color: var(--color-primary-dark);
 }
+
+[data-sonner-toast] {
+  min-height: 58px;
+  padding: 16px 18px !important;
+  font-size: 1rem !important;
+  font-weight: 650;
+}
+
+[data-sonner-toast] [data-icon] {
+  width: 22px;
+  height: 22px;
+}
 .iconButton {
   width: 42px;
   height: 42px;
