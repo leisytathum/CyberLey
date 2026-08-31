@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS public.encuestas_dinamicas (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   titulo text NOT NULL CHECK (length(trim(titulo)) >= 3),
-  descripcion text NOT NULL DEFAULT '',
+  descripcion text NOT NULL DEFAULT '' CHECK (char_length(descripcion) <= 500),
   estado text NOT NULL DEFAULT 'borrador' CHECK (estado IN ('borrador','publicada','cerrada')),
   creada_por uuid NOT NULL REFERENCES public.perfiles(id),
   fecha_creacion timestamptz NOT NULL DEFAULT now(),

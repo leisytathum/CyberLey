@@ -48,7 +48,7 @@ def list_risk_responses(token: str) -> list[dict]:
     from app.database.supabase_client import SupabaseRESTClient
 
     db = SupabaseRESTClient(token)
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         rows_future = executor.submit(
             db.get_all,
             "respuestas_encuesta_ciberseguridad",
@@ -56,14 +56,23 @@ def list_risk_responses(token: str) -> list[dict]:
         )
         participants_future = executor.submit(db.get_all, "participantes")
         profiles_future = executor.submit(db.get_all, "perfiles")
+        dynamic_future = executor.submit(
+            db.get_all,
+            "aplicaciones_encuesta",
+            order="fecha_respuesta.desc",
+        )
+        definitions_future = executor.submit(db.get_all, "encuestas_dinamicas")
         rows = rows_future.result()
         participants = {
             x.get("id_usuario"): x for x in participants_future.result()
         }
         profiles = {x.get("id"): x for x in profiles_future.result()}
-    return [
+        dynamic_rows = dynamic_future.result()
+        definitions = {x.get("id"): x for x in definitions_future.result()}
+    legacy = [
         {
             **row,
+            "tipo_evaluacion": "Evaluación general",
             "nombre_usuario": participants.get(row.get("id_usuario"), {}).get("nombre_completo")
             or profiles.get(row.get("id_usuario"), {}).get("nombre_completo")
             or "Usuario desconocido",
@@ -71,6 +80,20 @@ def list_risk_responses(token: str) -> list[dict]:
         for row in rows
         if profiles.get(row.get("id_usuario"), {}).get("rol") == "usuario"
     ]
+    dynamic = [
+        {
+            **row,
+            "id_respuesta": row.get("id"),
+            "tipo_evaluacion": definitions.get(row.get("id_encuesta"), {}).get("titulo") or "Encuesta configurable",
+            "puntaje_riesgo": float(row.get("porcentaje_riesgo") or 0),
+            "nombre_usuario": participants.get(row.get("id_usuario"), {}).get("nombre_completo")
+            or profiles.get(row.get("id_usuario"), {}).get("nombre_completo")
+            or "Usuario desconocido",
+        }
+        for row in dynamic_rows
+        if profiles.get(row.get("id_usuario"), {}).get("rol") == "usuario"
+    ]
+    return sorted(legacy + dynamic, key=lambda row: str(row.get("fecha_respuesta") or ""), reverse=True)
 
 
 def risk_analytics(token: str) -> dict:
@@ -112,11 +135,27 @@ def risk_analytics(token: str) -> dict:
 def user_risk_responses(token: str, user_id: str) -> list[dict]:
     from app.database.supabase_client import SupabaseRESTClient
 
-    return SupabaseRESTClient(token).get_all(
+    db = SupabaseRESTClient(token)
+    legacy = db.get_all(
         "respuestas_encuesta_ciberseguridad",
         filters={"id_usuario": f"eq.{user_id}"},
         order="fecha_respuesta.desc",
     )
+    dynamic = db.get_all(
+        "aplicaciones_encuesta",
+        filters={"id_usuario": f"eq.{user_id}"},
+        order="fecha_respuesta.desc",
+    )
+    normalized_dynamic = [
+        {
+            **row,
+            "id_respuesta": row.get("id"),
+            "puntaje_riesgo": float(row.get("porcentaje_riesgo") or 0),
+            "tipo_evaluacion": "Encuesta configurable",
+        }
+        for row in dynamic
+    ]
+    return sorted(legacy + normalized_dynamic, key=lambda row: str(row.get("fecha_respuesta") or ""), reverse=True)
 
 
 def save_risk_response(token: str, user_id: str, payload: RiskInput) -> dict:

@@ -25,7 +25,6 @@ const ImportPage=lazy(routeModules.imports);
 const CleaningPage=lazy(routeModules.cleaning);
 const BackupsPage=lazy(routeModules.backups);
 const AdministrationPage=lazy(routeModules.administration);
-const AnalyticsPage=lazy(routeModules.analytics);
 const GuidesPage=lazy(routeModules.adminGuides);
 
 // USUARIO
@@ -89,11 +88,6 @@ export default function AppRouter() {
             <Route
               path="riesgo"
               element={<RiskPage />}
-            />
-
-            <Route
-              path="dashboards"
-              element={<AnalyticsPage />}
             />
 
             {/* Contenido */}

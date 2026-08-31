@@ -54,11 +54,6 @@ const navigationGroups = [
         icon: FiShield,
         to: "/admin/riesgo",
       },
-      {
-        label: "Dashboards",
-        icon: FiBarChart2,
-        to: "/admin/dashboards",
-      },
     ],
   },
 

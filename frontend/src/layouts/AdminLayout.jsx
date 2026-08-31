@@ -34,12 +34,6 @@ const pageInformation = {
       "Consulta la clasificación y comportamiento de riesgo digital.",
   },
 
-  "/admin/dashboards": {
-    title: "Dashboards",
-    description:
-      "Visualiza tendencias, patrones y métricas relevantes.",
-  },
-
   "/admin/guias": {
     title: "Guías de ciberseguridad",
     description:
@@ -122,7 +116,7 @@ export default function AdminLayout() {
         />
 
         <main className="adminContent">
-          <div className="pageEnter">
+          <div className="pageEnter" key={location.pathname}>
             <ModuleErrorBoundary key={location.pathname}>
               <Suspense fallback={<div className="moduleSkeleton"><span /><span /><span /></div>}>
                 <Outlet />

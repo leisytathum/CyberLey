@@ -7,7 +7,7 @@ const PAGE_SIZE = 8;
 const riskLabels = { sin_evaluar: "Sin evaluar", bajo: "Bajo", medio: "Medio", alto: "Alto" };
 
 function initials(name = "") {
-  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P";
+  return String(name || "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P";
 }
 
 export default function ParticipantsPage() {
@@ -69,7 +69,7 @@ export default function ParticipantsPage() {
         </div>
         <State empty={!filtered.length} emptyText="No hay participantes que coincidan con los filtros." />
         {!!visibleRows.length && <div className="moduleTableWrap"><table className="moduleTable participantsTable"><thead><tr><th>Nombre</th><th>Edad</th><th>Ciudad</th><th>Nivel educativo</th><th>Encuestas</th><th>Puntaje</th><th>Riesgo</th><th>Acción</th></tr></thead><tbody>
-          {visibleRows.map((item) => { const riskKey = item.clasificacion_riesgo || "sin_evaluar"; return <tr key={item.id_participante}><td><div className="participantIdentity"><span>{initials(item.nombre_completo)}</span><strong>{item.nombre_completo}</strong></div></td><td>{item.edad ?? "—"}</td><td>{item.ciudad || "—"}</td><td>{item.nivel_educativo || "—"}</td><td>{item.encuestas_realizadas}</td><td>{item.puntaje_riesgo ?? "—"}</td><td><span className={`riskBadge ${riskKey}`}>{riskLabels[riskKey] || riskKey}</span></td><td><button className="participantDetailButton" onClick={() => setSelected(item)}>Detalle</button></td></tr>; })}
+          {visibleRows.map((item) => { const riskKey = item.clasificacion_riesgo || "sin_evaluar"; return <tr key={item.id_participante || item.id_usuario}><td><div className="participantIdentity"><span>{initials(item.nombre_completo)}</span><strong>{item.nombre_completo || "Participante sin nombre"}</strong></div></td><td>{item.edad ?? "—"}</td><td>{item.ciudad || "—"}</td><td>{item.nivel_educativo || "—"}</td><td>{item.encuestas_realizadas}</td><td>{item.puntaje_riesgo ?? "—"}</td><td><span className={`riskBadge ${riskKey}`}>{riskLabels[riskKey] || riskKey}</span></td><td><button className="participantDetailButton" onClick={() => setSelected(item)}>Detalle</button></td></tr>; })}
         </tbody></table></div>}
         {!!filtered.length && <footer className="participantsPagination"><span>Mostrando {firstResult} a {lastResult} de {filtered.length} resultados</span><div><button disabled={page === 1} onClick={() => setPage((current) => current - 1)}>‹</button><strong>{page}</strong><button disabled={page === pageCount} onClick={() => setPage((current) => current + 1)}>›</button></div></footer>}
       </section>

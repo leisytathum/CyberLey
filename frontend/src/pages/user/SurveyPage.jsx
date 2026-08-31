@@ -6,7 +6,22 @@ import { State } from "../../components/common/ModuleUI";
 
 export default function SurveyPage() {
   const [surveys, setSurveys] = useState([]), [selected, setSelected] = useState(null), [answers, setAnswers] = useState({}), [result, setResult] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState("");
-  useEffect(() => { api.cachedGet("/encuestas-configurables/disponibles", {}, 0).then(({ data }) => setSurveys(data.items || [])).catch((e) => setError(e.message)).finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data } = await api.cachedGet("/encuestas-configurables/disponibles", {}, 0);
+        const items = data.items || [];
+        setSurveys(items);
+        const pending = items.find((item) => !item.respondida);
+        if (pending) {
+          const { data: detail } = await api.cachedGet(`/encuestas-configurables/${pending.id}`, {}, 0);
+          setSelected(detail);
+        }
+      } catch (requestError) { setError(requestError.message); }
+      finally { setLoading(false); }
+    }
+    load();
+  }, []);
   async function open(item) { if (item.respondida) return; setLoading(true); try { const { data } = await api.cachedGet(`/encuestas-configurables/${item.id}`, {}, 0); setSelected(data); setAnswers({}); setResult(null); } catch (e) { setError(e.message); } finally { setLoading(false); } }
   async function submit(event) { event.preventDefault(); try { const respuestas = selected.preguntas.filter((question) => answers[question.id] !== undefined && answers[question.id] !== "").map((question) => ({ id_pregunta: question.id, valor: answers[question.id] })); const { data } = await api.post(`/encuestas-configurables/${selected.id}/responder`, { respuestas }); setResult(data); setSurveys((current) => current.map((item) => item.id === selected.id ? { ...item, respondida: true } : item)); toast.success("Encuesta guardada correctamente."); } catch (e) { toast.error(e.message); } }
   if (loading) return <State loading />;

@@ -101,7 +101,7 @@ export default function LoginPage() {
       navigate(
         profile.rol === "admin"
           ? "/admin"
-          : "/usuario",
+          : "/usuario/encuesta",
         {
           replace: true,
         }
