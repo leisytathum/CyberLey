@@ -53,7 +53,7 @@ export default function UserHomePage() {
 
       try {
         const { data } = await api.cachedGet("/riesgo/mis-resultados");
-        setEvaluations((data.items || []).slice(0, 5));
+        setEvaluations(data.items || []);
       } catch (requestError) {
         setError(requestError.message);
       } finally { setLoading(false); }
@@ -370,7 +370,7 @@ export default function UserHomePage() {
             </article>
           </section>
 
-          <section className="userHistoryCard">
+          {lastEvaluation.nivel_conocimiento && <section className="userHistoryCard">
             <div className="userCardHeading">
               <div>
                 <span className="userSectionLabel">
@@ -396,7 +396,7 @@ export default function UserHomePage() {
                 </article>
               ))}
             </div>
-          </section>
+          </section>}
 
           <section className="userHistoryCard">
             <div className="userCardHeading">
@@ -412,7 +412,7 @@ export default function UserHomePage() {
             </div>
 
             <div className="userHistoryList">
-              {evaluations.map(
+              {evaluations.slice(0, 5).map(
                 (evaluation) => (
                   <div
                     className="userHistoryItem"
@@ -422,8 +422,7 @@ export default function UserHomePage() {
                   >
                     <div>
                       <strong>
-                        Evaluación de
-                        ciberseguridad
+                        {evaluation.tipo_evaluacion || "Evaluación general"}
                       </strong>
 
                       <span>

@@ -50,14 +50,16 @@ def generate_report(token: str, user_id: str, request: ReportRequest) -> dict:
     for participant in participants:
         surveys = surveys_by_user.get(participant.get("id_usuario")) or [{}]
         rows.extend([{**participant, **survey} for survey in surveys])
+    date_from = request.fecha_desde.isoformat() if request.fecha_desde else None
+    date_to = request.fecha_hasta.isoformat() if request.fecha_hasta else None
     def keep(row: dict) -> bool:
         date = str(row.get("fecha_respuesta") or "")[:10]
         return (
             (not request.ciudad or row.get("ciudad") == request.ciudad)
             and (not request.nivel_educativo or row.get("nivel_educativo") == request.nivel_educativo)
             and (not request.riesgo or row.get("clasificacion_riesgo") == request.riesgo)
-            and (not request.fecha_desde or not date or date >= request.fecha_desde)
-            and (not request.fecha_hasta or not date or date <= request.fecha_hasta)
+            and (not date_from or not date or date >= date_from)
+            and (not date_to or not date or date <= date_to)
         )
     rows = [row for row in rows if keep(row)]
     columns = REPORT_COLUMNS.get(request.tipo, GENERAL_COLUMNS)

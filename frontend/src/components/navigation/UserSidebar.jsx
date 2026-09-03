@@ -1,26 +1,22 @@
 import {
   FiBookOpen,
+  FiChevronDown,
   FiChevronLeft,
   FiFileText,
   FiHome,
-  FiLogOut,
   FiShield,
   FiX,
 } from "react-icons/fi";
 
-import {
-  NavLink,
-  useNavigate,
-} from "react-router-dom";
-
-import { toast } from "sonner";
-
-import { supabase } from "../../services/supabaseClient";
+import { useEffect, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { preloadRoute } from "../../routes/routeModules";
 
 const navigationGroups = [
   {
     label: "Principal",
+    tone: "violet",
+    icon: FiHome,
     items: [
       {
         label: "Inicio",
@@ -33,27 +29,34 @@ const navigationGroups = [
 
   {
     label: "Mi seguridad",
+    tone: "purple",
+    icon: FiShield,
     items: [
       {
         label: "Evaluación",
         icon: FiFileText,
         to: "/usuario/encuesta",
+        guide: "evaluation",
       },
       {
         label: "Mis resultados",
         icon: FiShield,
         to: "/usuario/resultados",
+        guide: "results",
       },
     ],
   },
 
   {
     label: "Contenido",
+    tone: "blue",
+    icon: FiBookOpen,
     items: [
       {
         label: "Guías",
         icon: FiBookOpen,
         to: "/usuario/guias",
+        guide: "guides",
       },
     ],
   },
@@ -64,32 +67,14 @@ export default function UserSidebar({
   setCollapsed,
   mobileOpen,
   setMobileOpen,
-  profile,
 }) {
-  const navigate = useNavigate();
+  const location = useLocation();
+  const activeGroup = navigationGroups.find((group) => group.items.some((item) => item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)))?.label;
+  const [openGroup, setOpenGroup] = useState(activeGroup || "Mi seguridad");
 
-  async function logout() {
-    try {
-      await supabase.auth.signOut();
-
-      toast.success(
-        "Sesión cerrada correctamente."
-      );
-
-      navigate("/login", {
-        replace: true,
-      });
-    } catch (error) {
-      console.error(
-        "[CyberLey logout]",
-        error
-      );
-
-      toast.error(
-        "No pudimos cerrar la sesión."
-      );
-    }
-  }
+  useEffect(() => {
+    if (activeGroup && activeGroup !== "Principal") setOpenGroup(activeGroup);
+  }, [activeGroup]);
 
   function closeMobile() {
     setMobileOpen(false);
@@ -148,6 +133,7 @@ export default function UserSidebar({
             type="button"
             className="sidebarMobileClose"
             onClick={closeMobile}
+            aria-label="Cerrar navegación"
           >
             <FiX />
           </button>
@@ -155,18 +141,18 @@ export default function UserSidebar({
 
         <nav className="sidebarNavigation">
           {navigationGroups.map(
-            (group) => (
+            (group) => {
+              const GroupIcon = group.icon;
+              return (
               <div
-                className="sidebarGroup"
+                className={`sidebarGroup sidebarGroup-${group.tone} ${openGroup === group.label ? "sidebarGroupOpen" : ""}`}
                 key={group.label}
               >
-                {!collapsed && (
-                  <span className="sidebarGroupLabel">
-                    {group.label}
-                  </span>
-                )}
+                {!collapsed && group.label !== "Principal" && <button type="button" className="sidebarGroupToggle" onClick={() => setOpenGroup((current) => current === group.label ? "" : group.label)} aria-expanded={openGroup === group.label}><span className="sidebarGroupTitle"><i><GroupIcon /></i>{group.label}</span><FiChevronDown className="sidebarGroupChevron" /></button>}
 
-                <div className="sidebarGroupItems">
+                {!collapsed && group.label === "Principal" && <span className="sidebarGroupLabel"><i><GroupIcon /></i>{group.label}</span>}
+
+                <div className={`sidebarGroupItems ${collapsed || group.label === "Principal" || openGroup === group.label ? "sidebarGroupItemsOpen" : ""}`}>
                   {group.items.map(
                     (item) => {
                       const Icon =
@@ -183,6 +169,7 @@ export default function UserSidebar({
                           end={
                             item.end
                           }
+                          data-guide={item.guide}
                           onClick={
                             closeMobile
                           }
@@ -228,68 +215,11 @@ export default function UserSidebar({
                   )}
                 </div>
               </div>
-            )
+            );}
           )}
         </nav>
 
-        <div className="sidebarFooter">
-          <div className="sidebarProfile">
-            <div className="sidebarAvatar">
-              {profile
-                ?.nombre_completo
-                ?.charAt(0)
-                ?.toUpperCase() ||
-                "U"}
-            </div>
-
-            {!collapsed && (
-              <div className="sidebarProfileInfo">
-                <strong>
-                  {profile
-                    ?.nombre_completo ||
-                    "Usuario"}
-                </strong>
-
-                <span>
-                  Usuario
-                </span>
-              </div>
-            )}
-          </div>
-
-          <button
-            type="button"
-            className="sidebarLogout"
-            onClick={logout}
-          >
-            <FiLogOut />
-
-            {!collapsed && (
-              <span>
-                Cerrar sesión
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            className="sidebarCollapseButton"
-            onClick={() =>
-              setCollapsed(
-                (current) =>
-                  !current
-              )
-            }
-          >
-            <FiChevronLeft />
-
-            {!collapsed && (
-              <span>
-                Contraer menú
-              </span>
-            )}
-          </button>
-        </div>
+        <button type="button" className="sidebarEdgeToggle" onClick={() => setCollapsed((current) => !current)} aria-label={collapsed ? "Expandir menú" : "Contraer menú"} title={collapsed ? "Expandir menú" : "Contraer menú"}><FiChevronLeft /></button>
       </aside>
     </>
   );

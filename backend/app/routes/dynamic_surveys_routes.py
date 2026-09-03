@@ -1,25 +1,53 @@
-from fastapi import APIRouter, Depends, HTTPException
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, status
+
+from app.controllers.dynamic_surveys_controller import (
+    change_state_for_admin,
+    create_for_admin,
+    detail_for_admin,
+    detail_for_user,
+    list_for_admin,
+    list_for_user,
+    submit_for_user,
+)
 from app.middlewares.auth import current_user
 from app.middlewares.roles import require_admin
 from app.schemas.dynamic_survey_schema import SurveyCreate, SurveyState, SurveySubmission
-from app.services.dynamic_surveys_service import available_surveys, change_survey_state, create_survey, list_admin_surveys, submit_survey, survey_detail
 
 router = APIRouter(prefix="/encuestas-configurables", tags=["Encuestas configurables"])
 
-def call(function, *args):
-    try: return function(*args)
-    except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc: raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-@router.get("")
-def admin_list(user: dict = Depends(require_admin)): return {"items": call(list_admin_surveys, user["token"])}
-@router.post("", status_code=201)
-def create(payload: SurveyCreate, user: dict = Depends(require_admin)): return call(create_survey, user["token"], user["id"], payload)
-@router.get("/disponibles")
-def available(user: dict = Depends(current_user)): return {"items": call(available_surveys, user["token"], user["id"])}
-@router.get("/{survey_id}")
-def detail(survey_id: str, user: dict = Depends(current_user)): return call(survey_detail, user["token"], survey_id, True)
-@router.patch("/{survey_id}/estado")
-def state(survey_id: str, payload: SurveyState, user: dict = Depends(require_admin)): return call(change_survey_state, user["token"], survey_id, payload.estado)
-@router.post("/{survey_id}/responder", status_code=201)
-def answer(survey_id: str, payload: SurveySubmission, user: dict = Depends(current_user)): return call(submit_survey, user["token"], user["id"], survey_id, payload)
+@router.get("", summary="Listar encuestas para administración")
+def admin_list(user: dict = Depends(require_admin)):
+    return list_for_admin(user)
+
+
+@router.post("", status_code=status.HTTP_201_CREATED, summary="Crear una encuesta")
+def create(payload: SurveyCreate, user: dict = Depends(require_admin)):
+    return create_for_admin(payload, user)
+
+
+@router.get("/disponibles", summary="Listar evaluaciones disponibles para el usuario")
+def available(user: dict = Depends(current_user)):
+    return list_for_user(user)
+
+
+@router.get("/admin/{survey_id}", summary="Consultar encuesta y aplicaciones")
+def admin_detail(survey_id: UUID, user: dict = Depends(require_admin)):
+    return detail_for_admin(str(survey_id), user)
+
+
+@router.get("/{survey_id}", summary="Consultar una evaluación publicada")
+def detail(survey_id: UUID, user: dict = Depends(current_user)):
+    return detail_for_user(str(survey_id), user)
+
+
+@router.patch("/{survey_id}/estado", summary="Cambiar el estado de una encuesta")
+def state(survey_id: UUID, payload: SurveyState, user: dict = Depends(require_admin)):
+    return change_state_for_admin(str(survey_id), payload.estado, user)
+
+
+@router.post("/{survey_id}/responder", status_code=status.HTTP_201_CREATED, summary="Registrar una evaluación")
+def answer(survey_id: UUID, payload: SurveySubmission, user: dict = Depends(current_user)):
+    return submit_for_user(str(survey_id), payload, user)

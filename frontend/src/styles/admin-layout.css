@@ -145,6 +145,9 @@
 .sidebarGroup-blue { --group-color: #2563eb; --group-soft: #eff6ff; }
 .sidebarGroup-green { --group-color: #15803d; --group-soft: #f0fdf4; }
 .sidebarGroup-amber { --group-color: #b45309; --group-soft: #fffbeb; }
+[data-theme="dark"] .sidebarGroup-blue { --group-color:#60a5fa;--group-soft:#17213a; }
+[data-theme="dark"] .sidebarGroup-green { --group-color:#4ade80;--group-soft:#142a22; }
+[data-theme="dark"] .sidebarGroup-amber { --group-color:#fbbf24;--group-soft:#302513; }
 .sidebarGroupOpen:not(.sidebarGroup-violet) { background: color-mix(in srgb, var(--group-soft) 74%, var(--color-surface)); border-color: color-mix(in srgb, var(--group-color) 15%, transparent); box-shadow: 0 8px 22px color-mix(in srgb, var(--group-color) 8%, transparent); }
 
 .sidebarGroupLabel {

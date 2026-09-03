@@ -136,22 +136,30 @@ def user_risk_responses(token: str, user_id: str) -> list[dict]:
     from app.database.supabase_client import SupabaseRESTClient
 
     db = SupabaseRESTClient(token)
-    legacy = db.get_all(
-        "respuestas_encuesta_ciberseguridad",
-        filters={"id_usuario": f"eq.{user_id}"},
-        order="fecha_respuesta.desc",
-    )
-    dynamic = db.get_all(
-        "aplicaciones_encuesta",
-        filters={"id_usuario": f"eq.{user_id}"},
-        order="fecha_respuesta.desc",
-    )
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        legacy_future = executor.submit(
+            db.get_all,
+            "respuestas_encuesta_ciberseguridad",
+            filters={"id_usuario": f"eq.{user_id}"},
+            order="fecha_respuesta.desc",
+        )
+        dynamic_future = executor.submit(
+            db.get_all,
+            "aplicaciones_encuesta",
+            filters={"id_usuario": f"eq.{user_id}"},
+            order="fecha_respuesta.desc",
+        )
+        definitions_future = executor.submit(db.get_all, "encuestas_dinamicas")
+        legacy = legacy_future.result()
+        dynamic = dynamic_future.result()
+        definitions = {row.get("id"): row for row in definitions_future.result()}
     normalized_dynamic = [
         {
             **row,
             "id_respuesta": row.get("id"),
             "puntaje_riesgo": float(row.get("porcentaje_riesgo") or 0),
-            "tipo_evaluacion": "Encuesta configurable",
+            "tipo_evaluacion": definitions.get(row.get("id_encuesta"), {}).get("titulo")
+            or "Encuesta configurable",
         }
         for row in dynamic
     ]

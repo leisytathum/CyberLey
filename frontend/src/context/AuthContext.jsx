@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabaseClient";
 
 const AuthContext = createContext(null);
@@ -92,10 +92,15 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    if (error) throw error;
     localStorage.removeItem(PROFILE_CACHE_KEY);
-    return supabase.auth.signOut();
-  };
+    profileRequests.clear();
+    setSession(null);
+    setProfile(null);
+    setLoading(false);
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -106,7 +111,7 @@ export function AuthProvider({ children }) {
       signOut,
       refreshProfile: loadProfile,
     }),
-    [session, profile, loading],
+    [session, profile, loading, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

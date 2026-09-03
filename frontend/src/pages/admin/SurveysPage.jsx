@@ -30,7 +30,7 @@ export default function SurveysPage() {
 
   const open = async (id) => {
     setLoading(true); setError("");
-    try { const { data } = await api.cachedGet(`/encuestas-configurables/${id}`, {}, 0); setSelected(data); setMode("detail"); }
+    try { const { data } = await api.cachedGet(`/encuestas-configurables/admin/${id}`, {}, 0); setSelected(data); setMode("detail"); }
     catch (requestError) { setError(requestError.message); }
     finally { setLoading(false); }
   };

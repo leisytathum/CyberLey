@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import ThemeToggle from "../common/ThemeToggle";
-import { supabase } from "../../services/supabaseClient";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Topbar({
   title,
@@ -17,6 +17,7 @@ export default function Topbar({
   profile,
 }) {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const menuRef = useRef(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const firstName =
@@ -34,7 +35,7 @@ export default function Topbar({
 
   async function logout() {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       toast.success("Sesión cerrada correctamente.");
       navigate("/login", { replace: true });
     } catch (error) {

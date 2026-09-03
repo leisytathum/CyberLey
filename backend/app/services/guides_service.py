@@ -1,5 +1,6 @@
 from app.database.supabase_client import SupabaseRESTClient
 from concurrent.futures import ThreadPoolExecutor
+from app.utils.exceptions import ConflictError, ResourceNotFoundError
 
 
 def list_guides(token: str, user_id: str) -> dict:
@@ -23,9 +24,20 @@ def list_guides(token: str, user_id: str) -> dict:
 
 def complete_guide(token: str, user_id: str, guide_id: str) -> dict:
     db = SupabaseRESTClient(token)
+    guides = db.get("guias_ciberseguridad", filters={"id_guia": f"eq.{guide_id}"}, limit=1)
+    if not guides:
+        raise ResourceNotFoundError("La guía solicitada no existe.")
     participants = db.get_all("participantes", filters={"id_usuario": f"eq.{user_id}"})
-    if not participants: raise ValueError("Tu cuenta no tiene una ficha de participante asociada.")
+    if not participants:
+        raise ResourceNotFoundError("Tu cuenta no tiene una ficha de participante asociada.")
     participant_id = participants[0]["id_participante"]
     existing = db.get_all("guias_completadas", filters={"id_participante": f"eq.{participant_id}", "id_guia": f"eq.{guide_id}"})
-    if not existing: db.insert("guias_completadas", {"id_participante": participant_id, "id_guia": guide_id})
-    return {"completada": True, "id_guia": guide_id}
+    if existing:
+        return {"completada": True, "id_guia": guide_id, "ya_completada": True}
+    try:
+        db.insert("guias_completadas", {"id_participante": participant_id, "id_guia": guide_id})
+    except RuntimeError as exc:
+        if "duplicate" in str(exc).lower() or "unique" in str(exc).lower():
+            raise ConflictError("La guía ya estaba marcada como completada.") from exc
+        raise
+    return {"completada": True, "id_guia": guide_id, "ya_completada": False}

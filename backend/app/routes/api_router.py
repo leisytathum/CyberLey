@@ -14,12 +14,14 @@ from app.routes import (
     reports_routes,
     risk_routes,
     surveys_routes,
+    user_portal_routes,
 )
 
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health_routes.router)
 api_router.include_router(auth_routes.router)
+api_router.include_router(user_portal_routes.router)
 api_router.include_router(guides_routes.router)
 api_router.include_router(dashboard_routes.router)
 api_router.include_router(dynamic_surveys_routes.router)

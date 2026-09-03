@@ -10,9 +10,10 @@ import {
 } from "react-router-dom";
 
 import UserSidebar from "../components/navigation/UserSidebar";
-import UserTopbar from "../components/navigation/UserTopbar";
+import UserTopBar from "../components/navigation/UserTopBar";
 import { useAuth } from "../context/AuthContext";
 import ModuleErrorBoundary from "../components/common/ModuleErrorBoundary";
+import CyberGuide from "../components/user/CyberGuide";
 
 import "../styles/admin-layout.css";
 import "../styles/modules.css";
@@ -73,7 +74,7 @@ export default function UserLayout() {
 
   return (
     <div
-      className={`adminShell ${
+      className={`adminShell userShell ${
         collapsed
           ? "adminShellCollapsed"
           : ""
@@ -90,11 +91,10 @@ export default function UserLayout() {
         setMobileOpen={
           setMobileOpen
         }
-        profile={profile}
       />
 
       <div className="adminWorkspace">
-        <UserTopbar
+        <UserTopBar
           title={
             page.title
           }
@@ -119,6 +119,7 @@ export default function UserLayout() {
           </div>
         </main>
       </div>
+      <CyberGuide profile={profile} />
     </div>
   );
 }

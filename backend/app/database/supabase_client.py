@@ -104,6 +104,19 @@ class SupabaseRESTClient:
         self._raise_for_supabase_error(response)
         return response.json() if response.content else []
 
+    def delete(self, table: str, *, filters: dict[str, str]) -> list[dict]:
+        """Delete only explicitly filtered rows and return affected records."""
+        if not filters:
+            raise ValueError("Una eliminación requiere al menos un filtro.")
+        headers = {**self.headers, "Prefer": "return=representation"}
+        response = _http_client.delete(
+            f"{self.base_url}/{table}",
+            headers=headers,
+            params=filters,
+        )
+        self._raise_for_supabase_error(response)
+        return response.json() if response.content else []
+
     def upsert(
         self, table: str, payload: list[dict], *, on_conflict: str | None = None
     ) -> list[dict]:
@@ -121,6 +134,15 @@ class SupabaseRESTClient:
         )
         self._raise_for_supabase_error(response)
         return response.json() if response.content else []
+
+    def rpc(self, function: str, payload: dict | None = None) -> object:
+        response = _http_client.post(
+            f"{self.base_url}/rpc/{function}",
+            headers=self.headers,
+            json=payload or {},
+        )
+        self._raise_for_supabase_error(response)
+        return response.json() if response.content else None
 
     def count(self, table: str, filters: dict[str, str] | None = None) -> int:
         params: dict[str, str] = {"select": "*", "limit": "1"}

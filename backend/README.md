@@ -39,6 +39,11 @@ trigger que crea el perfil y participante al registrar una cuenta.
 ```powershell
 python run.py
 ```
+
+El servidor inicia en modo estable con `APP_RELOAD=false`. Si durante el
+desarrollo necesitas recarga automática, cambia temporalmente esa variable a
+`true`; el observador se limita a `backend/app/` y agrupa cambios durante un
+segundo para evitar reinicios consecutivos en carpetas sincronizadas.
 ## Ejecutar seeds
 cd backend
 venv\Scripts\activate

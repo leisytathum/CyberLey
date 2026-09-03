@@ -10,6 +10,10 @@ def test_health_endpoint():
     response = client.get("/api/v1/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["x-request-id"]
+    assert float(response.headers["x-process-time-ms"]) >= 0
 
 
 def test_protected_endpoint_requires_session():
