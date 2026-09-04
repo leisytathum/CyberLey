@@ -1042,3 +1042,21 @@
 .cyberGuideTyping span { font-size:.8rem;font-weight:700;white-space:nowrap; }
 .cyberGuideTyping>div { display:flex;gap:3px;align-items:center; }
 .cyberGuideTyping i { width:5px;height:5px; }
+
+/* Tipografía accesible para toda la experiencia de Ciby */
+.cyberGuideName { font-size:.8rem; }
+.cyberGuideMessage h2 { font-size:clamp(1.65rem,3vw,2.2rem);line-height:1.18; }
+.cyberGuideLayer.tour .cyberGuideMessage h2 { font-size:1.5rem; }
+.cyberGuideMessage p { font-size:1.06rem;line-height:1.72; }
+.cyberGuideActions button { min-height:46px;padding-inline:18px;font-size:.94rem; }
+.cyberGuideLauncher>span { min-width:94px;height:38px;font-size:.84rem; }
+.cyberGuideChat { width:min(500px,calc(100vw - 28px)); }
+.cyberGuideChat>header strong { font-size:1.18rem; }
+.cyberGuideChat>header small { font-size:.86rem; }
+.cyberGuideBubble p { padding:15px 17px;font-size:1.06rem;line-height:1.68; }
+.cyberGuideBubble>button { font-size:.96rem; }
+.cyberGuideSuggestions button { padding:9px 12px;font-size:.9rem; }
+.cyberGuideChatInput input { height:50px;font-size:1rem; }
+.cyberGuideTyping span { font-size:.9rem; }
+.cyberGuideFocus>span { font-size:.88rem; }
+@media(max-width:700px){.cyberGuideMessage p{font-size:1rem}.cyberGuideLayer.tour .cyberGuideMessage h2{font-size:1.3rem}.cyberGuideBubble p{font-size:1rem}.cyberGuideSuggestions button{font-size:.85rem}}

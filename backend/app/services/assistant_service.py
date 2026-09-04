@@ -59,8 +59,8 @@ def _legacy_answer_user_question(token: str, user_id: str, question: str) -> dic
     return _response("ayuda_general", "Puedo ayudarte con el uso de CyberLey, resultados, contraseñas, phishing, doble factor, privacidad y protección de dispositivos. Prueba preguntándome por uno de esos temas.", ["¿Qué hago primero?", "¿Qué significa mi puntaje?", "¿Cómo creo una contraseña segura?"])
 
 
-def answer_user_question(token: str, user_id: str, question: str) -> dict:
+def answer_user_question(token: str, user_id: str, question: str, history: list[dict] | None = None) -> dict:
     """Public entry point for Ciby's expanded conversational knowledge base."""
     from app.services.assistant_knowledge import answer_from_knowledge
 
-    return answer_from_knowledge(token, user_id, question)
+    return answer_from_knowledge(token, user_id, question, history)

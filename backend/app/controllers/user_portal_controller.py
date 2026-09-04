@@ -20,6 +20,7 @@ def finish_user_onboarding(user: dict) -> dict:
 
 def ask_assistant(payload: AssistantQuestion, user: dict) -> dict:
     try:
-        return answer_user_question(user["token"], user["id"], payload.pregunta)
+        history = [message.model_dump() for message in payload.historial]
+        return answer_user_question(user["token"], user["id"], payload.pregunta, history)
     except RuntimeError as exc:
         raise DataAccessError("Ciby no pudo consultar tu información en este momento.") from exc

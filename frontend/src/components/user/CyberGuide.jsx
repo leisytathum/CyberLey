@@ -149,7 +149,8 @@ export default function CyberGuide({ profile }) {
     setQuestion("");
     setAsking(true);
     try {
-      const request = api.post("/usuario/asistente", { pregunta: value })
+      const history = messages.slice(-8).map((message) => ({ rol: message.role === "user" ? "usuario" : "ciby", texto: message.text.slice(0, 500) }));
+      const request = api.post("/usuario/asistente", { pregunta: value, historial: history })
         .then((response) => ({ response }))
         .catch((error) => ({ error }));
       const [{ response, error }] = await Promise.all([
@@ -160,7 +161,7 @@ export default function CyberGuide({ profile }) {
       const { data } = response;
       setMessages((currentMessages) => [...currentMessages, { role: "assistant", text: data.respuesta, suggestions: data.sugerencias || [], action: data.accion }]);
     } catch {
-      setMessages((currentMessages) => [...currentMessages, { role: "assistant", text: "Uy, no pude responder en este momento 😕. Tus datos están bien; espera un momento e inténtalo otra vez.", suggestions: ["Volver a intentar", "¿Qué hago primero?"] }]);
+      setMessages((currentMessages) => [...currentMessages, { role: "assistant", text: "Uy, no pude responder en este momento 😕. Tus datos están bien; espera un momento e inténtalo otra vez.", suggestions: ["Necesito usar CyberLey", "¿Qué hago primero?"] }]);
     } finally {
       setAsking(false);
     }
