@@ -144,6 +144,12 @@ class SupabaseRESTClient:
         self._raise_for_supabase_error(response)
         return response.json() if response.content else None
 
+    def upload(self, bucket: str, path: str, content: bytes, content_type: str) -> str:
+        headers = {"apikey": settings.supabase_publishable_key, "Authorization": self.headers["Authorization"], "Content-Type": content_type, "x-upsert": "false"}
+        response = _http_client.post(f"{settings.supabase_url}/storage/v1/object/{bucket}/{path}", headers=headers, content=content)
+        self._raise_for_supabase_error(response)
+        return f"{settings.supabase_url}/storage/v1/object/public/{bucket}/{path}"
+
     def count(self, table: str, filters: dict[str, str] | None = None) -> int:
         params: dict[str, str] = {"select": "*", "limit": "1"}
         if filters:
